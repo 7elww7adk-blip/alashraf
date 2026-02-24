@@ -92,8 +92,6 @@ async function postToSheet(order) {
     name: order.customer.name,
     phone: order.customer.phone,
     area: order.customer.area,
-    branch: order.customer.branch || "",
-    nearestBranch: order.customer.branch || "",
     address: order.customer.address || "",
     items_json: JSON.stringify(order.items || []),
     items_count: String(itemsCount),     // عدد الأصناف
@@ -208,7 +206,6 @@ function buildWhatsAppMessage(order) {
   msg += `\n الاسم: ${order.customer.name}`;
   msg += `\n الهاتف: ${order.customer.phone}`;
   msg += `\n العنوان: ${order.customer.area} - ${order.customer.address || '-'}`;
-  msg += `\n الفرع الأقرب: ${order.customer.branch || '-'}`;
   msg += `\n====================`;
   msg += `\n🧺 تفاصيل الطلب:\n`;
 
@@ -262,7 +259,6 @@ window.AlAshrafOrders = {
         name: customer?.name || "",
         phone: customer?.phone || "",
         area: customer?.area || "",
-        branch: customer?.branch || "",
         address: customer?.address || ""
       },
       items,
@@ -363,7 +359,6 @@ function renderOrderDetails(order) {
     <div class="orders-address">
       <b>عنوان التوصيل:</b>
       <div>${escapeHtml(order.customer.area)} - ${escapeHtml(order.customer.address || "-")}</div>
-      <div>الفرع الأقرب: ${escapeHtml(order.customer.branch || "-")}</div>
       <div class="orders-address-sub">${escapeHtml(order.customer.name)} • ${escapeHtml(order.customer.phone)}</div>
     </div>
 
@@ -390,7 +385,7 @@ function renderOrdersList(orders, q="") {
   const qq = (q || "").trim().toLowerCase();
   const filtered = !qq ? orders : orders.filter(o => {
     const hay = [
-      o.orderId, o.deliveryCode, o.customer?.name, o.customer?.phone, o.customer?.area, o.customer?.branch,
+      o.orderId, o.deliveryCode, o.customer?.name, o.customer?.phone, o.customer?.area,
       ...(o.items||[]).map(i => i.name + " " + (i.variant||""))
     ].join(" ").toLowerCase();
     return hay.includes(qq);

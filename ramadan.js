@@ -73,7 +73,6 @@ function fetchWithTimeout(url, ms = 12000, options = {}) {
 }
 
 const CART_KEY        = 'alashraf_cart';
-const CHECKOUT_DATA_KEY = 'alashraf_checkout_data_v1';
 
 // لو فتحت الصفحة بـ ?nocache=1 هنمرره للـ Worker لتجربة فورية
 function getApiUrl() {
@@ -146,42 +145,6 @@ function hideLoaderNow() {
   document.documentElement.classList.remove('loading');
 }
 
-
-function loadCheckoutData() {
-  try {
-    return JSON.parse(localStorage.getItem(CHECKOUT_DATA_KEY) || '{}') || {};
-  } catch (_) { return {}; }
-}
-
-function saveCheckoutData() {
-  try {
-    const data = {
-      name: document.getElementById('c-name')?.value?.trim() || '',
-      phone: document.getElementById('c-phone')?.value?.trim() || '',
-      area: document.getElementById('c-area')?.value || '',
-      branch: document.getElementById('c-branch')?.value || '',
-      address: document.getElementById('c-address')?.value?.trim() || ''
-    };
-    localStorage.setItem(CHECKOUT_DATA_KEY, JSON.stringify(data));
-  } catch (_) {}
-}
-
-function restoreCheckoutData() {
-  const data = loadCheckoutData();
-  const mapping = [
-    ['c-name', data.name || ''],
-    ['c-phone', data.phone || ''],
-    ['c-area', data.area || ''],
-    ['c-branch', data.branch || ''],
-    ['c-address', data.address || '']
-  ];
-
-  mapping.forEach(([id, value]) => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.value = value;
-  });
-}
 
 // أقسام رمضان للبنرات
 const RAMADAN_BANNERS = [
@@ -302,17 +265,12 @@ const title = document.getElementById('ramadan-category-title');
   // ✅ اجلب الداتا بالخلفية (لو مفيش كاش هيظهر اللودر طبيعي)
   fetchRamadanProducts({ silent: hasCache });
 
-  restoreCheckoutData();
-
   // متابعة حقول الشحن لتعطيل/تفعيل زر الإرسال
-  ['c-name', 'c-phone', 'c-area', 'c-branch', 'c-address'].forEach(id => {
+  ['c-name', 'c-phone', 'c-area'].forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
-    const evt = (id === 'c-area' || id === 'c-branch') ? 'change' : 'input';
-    el.addEventListener(evt, () => {
-      saveCheckoutData();
-      refreshCheckoutButtonState();
-    });
+    const evt = (id === 'c-area') ? 'change' : 'input';
+    el.addEventListener(evt, refreshCheckoutButtonState);
   });
 
   refreshCheckoutButtonState();
@@ -884,8 +842,6 @@ function toggleCart(forceOpen) {
 
   document.body.classList.toggle('cart-open', shouldOpen);
   document.documentElement.classList.toggle('cart-open', shouldOpen);
-
-  if (shouldOpen) restoreCheckoutData();
 }
 
 function showToast() {
@@ -904,9 +860,8 @@ function refreshCheckoutButtonState() {
   const name = document.getElementById('c-name')?.value?.trim() || '';
   const phone = document.getElementById('c-phone')?.value?.trim() || '';
   const area = document.getElementById('c-area')?.value || '';
-  const branch = document.getElementById('c-branch')?.value || '';
 
-  const ok = (cart && cart.length > 0 && name && phone && area && branch);
+  const ok = (cart && cart.length > 0 && name && phone && area);
 
   // ✅ مطلوب: الزر يفضل شغال (مش disabled)
   btn.classList.toggle('btn-disabled', !ok);
@@ -924,20 +879,17 @@ async function checkoutWhatsApp() {
   const nameInput = document.getElementById('c-name');
   const phoneInput = document.getElementById('c-phone');
   const areaSelect = document.getElementById('c-area');
-  const branchSelect = document.getElementById('c-branch');
   const addressInput = document.getElementById('c-address');
 
   const name = nameInput ? nameInput.value.trim() : '';
   const phone = phoneInput ? phoneInput.value.trim() : '';
   const area = areaSelect ? areaSelect.value : '';
-  const branch = branchSelect ? branchSelect.value : '';
   const address = addressInput ? addressInput.value.trim() : '';
 
   const missing = [];
-  if (!name)   missing.push({ label: 'الاسم', el: nameInput });
-  if (!phone)  missing.push({ label: 'الموبايل', el: phoneInput });
-  if (!area)   missing.push({ label: 'المنطقة', el: areaSelect });
-  if (!branch) missing.push({ label: 'اختار الفرع الاقرب ليك', el: branchSelect });
+  if (!name)  missing.push({ label: 'الاسم', el: nameInput });
+  if (!phone) missing.push({ label: 'الموبايل', el: phoneInput });
+  if (!area)  missing.push({ label: 'المنطقة', el: areaSelect });
 
   if (missing.length) {
     const msg = 'استكمل البيانات\n' + missing.map(m => `- ${m.label}`).join('\n');
@@ -955,11 +907,9 @@ async function checkoutWhatsApp() {
     return;
   }
 
-  saveCheckoutData();
-
   await window.AlAshrafOrders.createOrderFromCheckout({
     cart,
-    customer: { name, phone, area, branch, address },
+    customer: { name, phone, area, address },
     whatsappNumber: WHATSAPP_NUMBER,
     sourcePage: "ramadan"
   });

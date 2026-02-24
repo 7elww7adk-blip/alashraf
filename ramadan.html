@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ياميش رمضان 2026 - الأشراف</title>
+
+    <!-- الخطوط العامة -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@500;700&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" type="image/png" href="image/logo.png">
+</head>
+<body class="ramadan-page loading">
+    <!-- شاشة التحميل -->
+    <div id="page-loader">
+        <div class="loader-content">
+            <img src="image/NEW_IMAGE.png" alt="جاري التحميل..." class="loader-logo">
+            <p>جاري تجهيز عروض رمضان ..</p>
+        </div>
+    </div>
+
+    <!-- الهيدر -->
+    <header class="store-header">
+        <div class="top-bar">
+            <div class="container top-flex">
+                <div class="right-part">
+                    <!-- اللوجو يرجّع للصفحة الرئيسية -->
+                    <a href="index.html" class="logo-box" aria-label="العودة للصفحة الرئيسية">
+                        <img src="image/logo.png" alt="الأشراف - البيت السوري">
+                    </a>
+                    <!-- زر أقسام رمضان للموبايل -->
+                    <div class="ramadan-header-title">
+    الأشراف - البيت السوري
+</div>
+                </div>
+                <!-- البحث -->
+                <div class="search-part">
+                    <input type="text" id="searchInput"
+                           placeholder="دور في منتجات رمضان.. (تمر، قمر الدين، قطايف...)"
+                           onkeyup="filterRamadanProducts()">
+                    <button class="search-submit">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                             stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+                             style="width:18px; height:18px;">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- السلة -->
+                <div class="left-part">
+                    <div class="menu-trigger" onclick="location.href='orders.html'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"></path>
+              <rect x="9" y="3" width="6" height="4" rx="1"></rect>
+              <path d="M8 11h8"></path>
+              <path d="M8 15h8"></path>
+              <path d="M8 19h6"></path>
+            </svg>
+            <span>طلباتي</span></div>
+                    <div class="cart-circle-btn" onclick="toggleCart()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+                            <line x1="3" y1="6" x2="21" y2="6"></line>
+                            <path d="M16 10a4 4 0 0 1-8 0"></path>
+                        </svg>
+                        <span id="cart-count">0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- روابط الأقسام -->
+        <div class="bottom-bar">
+            <div class="container">
+                <nav class="cat-links">
+                    <a href="index.html">الصفحة الرئيسية</a>
+                    <a href="#ramadan-cats"    data-scroll="ramadan-cats">أقسام رمضان</a>
+                    <a href="#ramadan-offers"  data-scroll="ramadan-offers">عروض رمضان</a>
+                    <a href="#ramadan-products" data-scroll="ramadan-products">كل منتجات رمضان</a>
+                    <a href="#contact"         data-scroll="contact">اتصل بنا</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero رمضان -->
+    <section class="hero-classic hero-ramadan" id="ramadan-hero">
+        <!-- صورة البانر -->
+        <img src="image/ramadan-2026.jpg"
+             alt="ياميش رمضان 2026"
+             class="hero-ramadan-img">
+
+        <div class="hero-overlay"></div>
+        <img src="image/logo.png" alt="الأشراف" class="hero-watermark-logo">
+
+        <div class="hero-text">
+    <h1 class="ramadan-hero-title">ياميش رمضان 2026</h1>
+    <p>كل الياميش والحلويات الرمضانية في مكان واحد مع الأشراف - البيت السوري.</p>
+            <div class="hero-btns">
+                <button class="olive-btn" onclick="scrollToSection('ramadan-cats')">شوف أقسام رمضان</button>
+                <button class="olive-btn" onclick="scrollToSection('ramadan-products')">كل منتجات رمضان</button>
+            </div>
+        </div>
+    </section>
+    <!-- أقسام رمضان (بانرات ياميش / حلويات) -->
+    <section class="categories-section ramadan-banners-section" id="ramadan-cats">
+        <div class="container">
+            <div class="section-header">
+                <h2>أقسام رمضان</h2>
+                <div class="line"></div>
+            </div>
+
+            <div id="ramadan-banners" class="ramadan-banners-grid">
+                <!-- يتم ملؤها من ramadan.js -->
+            </div>
+        </div>
+    </section>
+    <!-- عروض رمضان -->
+    <section class="products-display" id="ramadan-offers">
+        <div class="container">
+            <div class="section-header">
+                <h2>عروض رمضان</h2>
+                <div class="line"></div>
+            </div>
+            <div class="classic-grid" id="ramadan-offers-list">
+                <p style="text-align:center; width:100%;">جاري تحميل عروض رمضان...</p>
+            </div>
+        </div>
+    </section>
+    <!-- كل منتجات رمضان -->
+    <section class="products-display" id="ramadan-products">
+        <div class="container">
+            <div class="section-header">
+                <h2 id="ramadan-category-title">كل منتجات رمضان</h2>
+                <div class="line"></div>
+            </div>
+
+            <!-- هنا هيتبني (ياميش رمضان / حلويات رمضان) من js -->
+            <div id="ramadan-product-list">
+                <p style="text-align:center; width:100%;">جاري تحميل منتجات رمضان...</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- الفوتر -->
+    <footer class="compact-footer" id="contact">
+        <div class="container">
+            <div class="footer-row">
+                <div class="f-item brand-side">
+                    <h4>الأشراف - البيت السوري</h4>
+                    <div class="social-mini">
+                        <a href="https://www.facebook.com/AlAshrafalbetalsory" target="_blank" aria-label="Facebook">
+                            <!-- أيقونات مختصرة -->
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                                 viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                                <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path>
+                            </svg>
+                        </a>
+                        <a href="https://www.instagram.com/alashraf.albetalsory" target="_blank" aria-label="Instagram">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                                 viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
+                                <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
+                                <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="f-item branches-side">
+                    <ul class="compact-list">
+                        <li>
+                            <span class="b-txt">جراند مول - الشروق 2</span>
+                            <a href="tel:01099888693" dir="ltr">0109 988 8693</a>
+                        </li>
+                        <li>
+                            <span class="b-txt">تاون سنتر - الشروق 2</span>
+                            <a href="tel:01093629293" dir="ltr">0109 362 9293</a>
+                        </li>
+                        <li>
+                            <span class="b-txt">شل أوت - الحي السابع</span>
+                            <a href="tel:01061602010" dir="ltr">0106 160 2010</a>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="f-item delivery-side">
+                    <div class="delivery-pill">
+                        <span>التوصيل: <b>مدينتي - الشروق - وصال</b></span>
+                    </div>
+                </div>
+            </div>
+            <div class="copy-mini">© 2026 الأشراف للحلويات - عروض رمضان</div>
+        </div>
+    </footer>
+
+        <!-- سلة رمضان -->
+    <!-- خلفية شفافة وراء السلة -->
+    <div class="cart-backdrop" id="cartBackdrop" onclick="toggleCart(false)"></div>
+
+    <div class="cart-sidebar" id="cartSidebar">
+        <div class="cart-header">
+            <div>
+                <h3>سلة رمضان</h3>
+                <div class="cart-header-note">اطلب ياميش وحلويات رمضان بسهولة 🛒</div>
+            </div>
+            <span class="close-btn" onclick="toggleCart(false)">×</span>
+        </div>
+
+        <div class="cart-items" id="cartItems"></div>
+
+        <div class="cart-form">
+            <h4>بيانات الشحن 🚚</h4>
+            <div class="form-group">
+                <input type="text" id="c-name" placeholder="الاسم بالكامل" required>
+            </div>
+            <div class="form-group">
+                <input type="tel" id="c-phone" placeholder="رقم الموبايل" required>
+            </div>
+            <div class="form-group">
+                <select id="c-area">
+                    <option value="" disabled selected>اختر المنطقة</option>
+                    <option value="الشروق">الشروق</option>
+                    <option value="وصال">وصال</option>
+                    <option value="مدينتي">مدينتي</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <textarea id="c-address" rows="2" placeholder="العنوان بالتفصيل (اختياري)"></textarea>
+            </div>
+        </div>
+
+        <div class="cart-footer">
+            <div class="total">
+      <div class="total-row">
+        <span>الإجمالي:</span>
+                <span id="cartTotal">0</span> ج.م
+      </div>
+      <div class="cart-note">ملحوظة: السعر الإجمالي غير شامل التوصيل، وسيتم تحديده من خلال شات الواتساب.</div>
+    </div>
+            <button id="checkoutBtn" class="checkout-btn" type="button">✅ إرسال طلب رمضان واتساب</button>
+        </div>
+    </div>
+    <!-- زر واتساب عام -->
+    <a href="https://wa.me/201097700404" class="float-whatsapp" target="_blank">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" alt="WhatsApp">
+    </a>
+
+    <!-- زر السلة العائم + Toast -->
+    <div class="floating-cart-btn" id="floatingCart" onclick="toggleCart()">
+        <div class="f-cart-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="9" cy="21" r="1"></circle>
+                <circle cx="20" cy="21" r="1"></circle>
+                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+            </svg>
+        </div>
+        <span id="float-count">0</span>
+    </div>
+
+    <div id="toast-notification">تمت الإضافة لسلة رمضان ✅</div>
+
+    <!-- سكربت رمضان -->
+    <script src="orders.js"></script>
+    <script src="ramadan.js"></script>
+</body>
+</html>

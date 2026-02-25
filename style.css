@@ -3,12 +3,10 @@
    ========================================================= */
 
 /* 1. الخط الافتراضي */
-@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@500;700&display=swap');
 
 :root {
-    --main-font: system-ui, -apple-system, "Segoe UI", Tahoma, Arial, sans-serif;
-    --heading-font: system-ui, -apple-system, "Segoe UI", Tahoma, Arial, sans-serif;
+    --main-font: "Tajawal", system-ui, -apple-system, "Segoe UI", Tahoma, Arial, sans-serif;
+    --heading-font: "Tajawal", system-ui, -apple-system, "Segoe UI", Tahoma, Arial, sans-serif;
     --cream-bg: #F9F7F2;
     --olive-green: #68592e;   
     --deep-brown: #3E2723;
@@ -18,7 +16,7 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; outline: none; }
 html, body {
-    font-family: system-ui, -apple-system, "Segoe UI", Tahoma, Arial, sans-serif;
+    font-family: "Tajawal", system-ui, -apple-system, "Segoe UI", Tahoma, Arial, sans-serif;
 }
 
 body { 
@@ -27,7 +25,7 @@ body {
     color: var(--deep-brown); 
     direction: rtl; 
     overflow-x: hidden; 
-    font-weight: 600; 
+    font-weight: 400; 
 }
 
 
@@ -36,6 +34,8 @@ body {
    ================================ */
 *, *::before, *::after { box-sizing: border-box; }
 img, video { max-width: 100%; height: auto; display: block; }
+
+h1, h2, h3, h4, h5, h6 { font-weight: 800; }
 
 /* كونتينر مرن على كل الشاشات */
 .container{
@@ -50,7 +50,7 @@ img, video { max-width: 100%; height: auto; display: block; }
 /* تخصيص الفونت */
 h1, h2, h3, .hero-text h1, .section-header h2, .cat-title, .mosaic-content h3, .cart-header h3, .info h4 {
     font-family: var(--heading-font) !important; 
-    font-weight: 700; letter-spacing: 0; line-height: 1.4;
+    font-weight: 800; letter-spacing: 0; line-height: 1.4;
 }
 .olive-btn, .outline-btn, .add-btn, .checkout-btn, .share-btn, p, span, input { font-family: var(--main-font) !important; }
 .price, .b-phone, .compact-list a { font-family: 'Tajawal', sans-serif !important; }

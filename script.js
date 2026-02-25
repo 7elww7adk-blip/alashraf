@@ -287,10 +287,36 @@ function restoreCheckoutData() {
   });
 }
 
+function ensureSingleDailyOffersSection() {
+  const dailySections = Array.from(document.querySelectorAll('#daily-offers'));
+  const dailyLists = Array.from(document.querySelectorAll('#daily-offers-list'));
+  const best = document.getElementById('best-sellers');
+
+  // احذف أي نسخ إضافية بالكامل
+  dailySections.slice(1).forEach(sec => sec.remove());
+
+  // لو في نسخ إضافية لنفس الـ id داخل أقسام أخرى
+  dailyLists.slice(1).forEach(el => {
+    const sec = el.closest('section');
+    if (sec && sec.id !== 'daily-offers') sec.remove();
+    else el.remove();
+  });
+
+  const daily = document.getElementById('daily-offers');
+  if (!daily || !best) return;
+
+  // تأكد أن عروض اليوم قبل الأكثر مبيعاً
+  const dailyBeforeBest = !!(daily.compareDocumentPosition(best) & Node.DOCUMENT_POSITION_FOLLOWING);
+  if (!dailyBeforeBest) {
+    best.parentNode?.insertBefore(daily, best);
+  }
+}
+
 // =========================================================
 // 5. التشغيل والتحميل (Init & Loader)
 // =========================================================
 document.addEventListener('DOMContentLoaded', () => {
+  ensureSingleDailyOffersSection();
   loadCartFromStorage();
   renderCategoriesGrid();
 

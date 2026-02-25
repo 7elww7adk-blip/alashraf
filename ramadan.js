@@ -545,6 +545,8 @@ function createRamadanOfferCard(p) {
 
   if (!isRamadanOffer(p) || !(newPrice <= oldPrice)) return '';
 
+  if (!isRamadanOffer(p) || !(oldPrice > 0) || !(newPrice < oldPrice)) return '';
+
   return `
     <div class="product-card offer-card"
       data-name="${escapeHtml(nameRaw)}"

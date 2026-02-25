@@ -10,6 +10,7 @@ const APPS_SCRIPT_URL = "https://alashrafsory.7elw-w-7adk.workers.dev/";
 const WHATSAPP_NUMBER = '201097700404'; // رقم الأشراف
 const DEFAULT_IMAGE = 'image/default.jpg';
 const CART_KEY = 'alashraf_cart';
+const CHECKOUT_DATA_KEY = 'alashraf_checkout_data_v1';
 
 // لو فتحت الصفحة بـ ?nocache=1 هنمرره للـ Worker لتجربة فورية
 function getApiUrl() {
@@ -174,6 +175,118 @@ function pickDefaultVariant(variants, fallbackPrice) {
   return variants[0];
 }
 
+function normalizeDigits(str) {
+  return (str || '').toString()
+    .replace(/[٠-٩]/g, d => '0123456789'['٠١٢٣٤٥٦٧٨٩'.indexOf(d)])
+    .replace(/[٫٬]/g, '.');
+}
+
+function toNumber(val) {
+  const s = normalizeDigits(val).replace(/[^\d.]/g, '');
+  const n = Number(s);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function getDiscountAfterPrice(p) {
+  const keys = [
+    'offer_price','offerPrice',
+    'discount_price','discountPrice',
+    'after_discount','afterDiscount',
+    'after_price','afterPrice',
+    'price_after','priceAfter',
+    'new_price','newPrice',
+    'سعر بعد الخصم','بعد الخصم','سعر_بعد_الخصم','سعر بعد-الخصم'
+  ];
+
+  for (const k of keys) {
+    if (p && Object.prototype.hasOwnProperty.call(p, k)) {
+      const n = toNumber(p[k]);
+      if (n > 0) return n;
+    }
+  }
+
+  if (p) {
+    for (const k of Object.keys(p)) {
+      const kk = (k || '').toString();
+      if (kk.includes('خصم') || kk.toLowerCase().includes('discount')) {
+        const n = toNumber(p[k]);
+        if (n > 0) return n;
+      }
+    }
+  }
+
+  return 0;
+}
+
+function getKiloVariant(variantsList) {
+  if (!variantsList || !variantsList.length) return null;
+  return variantsList.find(v => v.grams === 1000 || (v.label || '').includes('1 كيلو')) || null;
+}
+
+function isYes(val) {
+  const s = (val ?? '').toString().trim().toLowerCase();
+  return ['نعم', 'yes', 'true', '1', 'y', 'ok'].includes(s);
+}
+
+function isDailyOffer(p) {
+  if (!p || typeof p !== 'object') return false;
+  return isYes(p.daily_offer || p.dailyOffer || p['عرض اليوم'] || p['daily offer']);
+}
+
+function pickOfferVariant(variantsList) {
+  if (!variantsList || !variantsList.length) return null;
+  return getKiloVariant(variantsList) || variantsList[0];
+}
+
+function getOfferTarget(p) {
+  const variantsList = parseVariants(p);
+  if (variantsList?.length) {
+    const chosenVariant = pickOfferVariant(variantsList);
+    if (!chosenVariant || !(chosenVariant.price > 0)) return null;
+    return { basePrice: chosenVariant.price, variantLabel: chosenVariant.label || '' };
+  }
+
+  const basePrice = toNumber(p?.price);
+  if (!(basePrice > 0)) return null;
+  return { basePrice, variantLabel: '' };
+}
+
+function loadCheckoutData() {
+  try {
+    return JSON.parse(localStorage.getItem(CHECKOUT_DATA_KEY) || '{}') || {};
+  } catch (_) { return {}; }
+}
+
+function saveCheckoutData() {
+  try {
+    const data = {
+      name: document.getElementById('c-name')?.value?.trim() || '',
+      phone: document.getElementById('c-phone')?.value?.trim() || '',
+      area: document.getElementById('c-area')?.value || '',
+      branch: document.getElementById('c-branch')?.value || '',
+      address: document.getElementById('c-address')?.value?.trim() || ''
+    };
+    localStorage.setItem(CHECKOUT_DATA_KEY, JSON.stringify(data));
+  } catch (_) {}
+}
+
+function restoreCheckoutData() {
+  const data = loadCheckoutData();
+  const mapping = [
+    ['c-name', data.name || ''],
+    ['c-phone', data.phone || ''],
+    ['c-area', data.area || ''],
+    ['c-branch', data.branch || ''],
+    ['c-address', data.address || '']
+  ];
+
+  mapping.forEach(([id, value]) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.value = value;
+  });
+}
+
 // =========================================================
 // 5. التشغيل والتحميل (Init & Loader)
 // =========================================================
@@ -189,6 +302,7 @@ document.addEventListener('DOMContentLoaded', () => {
     __productsLoading = false;
     __productsFetchedOnce = true;
 renderBestSellers();
+    renderDailyOffers();
     restoreUserSession();
     hideLoaderNow();
   }
@@ -197,12 +311,19 @@ renderBestSellers();
   fetchProducts({ silent: hasCache });
 
   // إدخالات الشحن
-  ['c-name', 'c-phone', 'c-area'].forEach(id => {
+  restoreCheckoutData();
+
+  ['c-name', 'c-phone', 'c-area', 'c-branch', 'c-address'].forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
-    const evt = (id === 'c-area') ? 'change' : 'input';
-    el.addEventListener(evt, refreshCheckoutButtonState);
+    const evt = (id === 'c-area' || id === 'c-branch') ? 'change' : 'input';
+    el.addEventListener(evt, () => {
+      saveCheckoutData();
+      refreshCheckoutButtonState();
+    });
   });
+
+  refreshCheckoutButtonState();
 });
 // كليك عام (بديل onclick)
 let handlersBound = false;
@@ -340,6 +461,7 @@ async function fetchProducts(opts = {}) {
       if (__pendingCategory) { const c = __pendingCategory; __pendingCategory = null; try { openCategory(c, true); } catch(e) {} }
       saveMainCache(fresh, newHash);
       renderBestSellers();
+      renderDailyOffers();
       restoreUserSession();
       return;
     }
@@ -354,6 +476,7 @@ async function fetchProducts(opts = {}) {
       saveMainCache(fresh, newHash);
 
       renderBestSellers();
+      renderDailyOffers();
 
       const productsArea = document.getElementById('products-area');
       const isProductsView = productsArea && productsArea.style.display !== 'none';
@@ -409,6 +532,72 @@ function renderBestSellers() {
   } else {
     list.innerHTML = '<p style="text-align:center; width:100%; opacity:0.7;">جاري تجهيز العروض المميزة... ✨</p>';
   }
+}
+
+function renderDailyOffers() {
+  const list = document.getElementById('daily-offers-list');
+  if (!list) return;
+
+  const offers = (allProducts || []).filter(p => {
+    if (!isDailyOffer(p)) return false;
+
+    const after = getDiscountAfterPrice(p);
+    const target = getOfferTarget(p);
+    if (!target) return false;
+
+    return after > 0 && target.basePrice >= after;
+  });
+
+  if (!offers.length) {
+    list.innerHTML = '<p style="text-align:center; width:100%;">لا توجد عروض اليوم حالياً</p>';
+    return;
+  }
+
+  list.innerHTML = offers.map(p => createDailyOfferCard(p)).filter(Boolean).join('');
+}
+
+function createDailyOfferCard(p) {
+  const nameRaw = (p.name || 'منتج').toString().trim();
+  const imgRaw  = (p.image && p.image.trim() !== '') ? p.image : DEFAULT_IMAGE;
+
+  const newPrice = getDiscountAfterPrice(p);
+  if (!newPrice) return '';
+
+  const target = getOfferTarget(p);
+  if (!target) return '';
+
+  const oldPrice = target.basePrice;
+  const offerVariantLabel = target.variantLabel;
+  const offerVariantForCart = offerVariantLabel;
+
+  if (!(newPrice <= oldPrice) || !isDailyOffer(p)) return '';
+
+  return `
+    <div class="product-card offer-card"
+      data-name="${escapeHtml(nameRaw)}"
+      data-img="${escapeHtml(imgRaw)}"
+      data-price="${newPrice}"
+      data-variant="${escapeHtml(offerVariantForCart)}">
+      <span class="offer-badge">عرض اليوم</span>
+
+      <div class="img-wrap">
+        <img src="${escapeHtml(imgRaw)}"
+             alt="${escapeHtml(offerVariantLabel ? `${nameRaw} - ${offerVariantLabel}` : nameRaw)}"
+             onerror="this.src='${DEFAULT_IMAGE}'">
+      </div>
+
+      <div class="info">
+        <h4>${escapeHtml(nameRaw)}</h4>
+
+        ${offerVariantLabel ? `<div class="offer-variant-pill">عرض على: ${escapeHtml(offerVariantLabel)}</div>` : ''}
+
+        <span class="price js-price">${newPrice} ج.م</span>
+        <div class="old-price"><s>${oldPrice} ج.م</s></div>
+
+        <button class="add-btn js-add-to-cart" type="button">أضف للسلة</button>
+      </div>
+    </div>
+  `;
 }
 
 function createProductCard(p) {
@@ -505,7 +694,7 @@ function openCategory(catName, isRestore = false) {
   };
 
   if (isRestore) {
-    document.querySelectorAll('#main-hero, #mosaic, #categories-area, #best-sellers')
+    document.querySelectorAll('#main-hero, #mosaic, #categories-area, #best-sellers, #daily-offers')
       .forEach(el => el.style.display = 'none');
     productsArea.style.display = 'block';
     productsArea.classList.remove('hidden-state');
@@ -523,7 +712,7 @@ function openCategory(catName, isRestore = false) {
       productList.classList.remove('fade-out-grid');
     }, 300);
   } else {
-    const itemsToHide = '#main-hero, #mosaic, #categories-area, #best-sellers';
+    const itemsToHide = '#main-hero, #mosaic, #categories-area, #best-sellers, #daily-offers';
     smoothSwitch(itemsToHide, '#products-area', () => {
       render();
       const yOffset = -90;
@@ -610,7 +799,7 @@ function showCategories(target = 'top') {
 
   setTimeout(() => {
     itemsToHide.forEach(el => el.style.display = 'none');
-    ['#main-hero', '#mosaic', '#best-sellers', '#categories-area'].forEach(id => {
+    ['#main-hero', '#mosaic', '#best-sellers', '#daily-offers', '#categories-area'].forEach(id => {
       const el = document.querySelector(id);
       if (el) {
         el.style.display = (id === '#main-hero') ? 'flex' : 'block';
@@ -667,7 +856,7 @@ function filterProducts() {
   const txt = (input?.value || '').toLowerCase().trim();
 
   if (txt !== '') {
-    const itemsToHide = '#main-hero, #mosaic, #categories-area, #best-sellers';
+    const itemsToHide = '#main-hero, #mosaic, #categories-area, #best-sellers, #daily-offers';
     smoothSwitch(itemsToHide, '#products-area', () => {
       document.getElementById('current-category-title').innerText = 'نتائج البحث';
       const filterContainer = document.getElementById('smart-filters');
@@ -844,6 +1033,8 @@ function toggleCart(forceOpen) {
 
   document.body.classList.toggle('cart-open', shouldOpen);
   document.documentElement.classList.toggle('cart-open', shouldOpen);
+
+  if (shouldOpen) restoreCheckoutData();
 }
 
 function showToast() {
@@ -861,8 +1052,9 @@ function refreshCheckoutButtonState() {
   const name = document.getElementById('c-name')?.value.trim();
   const phone = document.getElementById('c-phone')?.value.trim();
   const area = document.getElementById('c-area')?.value;
+  const branch = document.getElementById('c-branch')?.value;
 
-  const ok = !!(hasItems && name && phone && area);
+  const ok = !!(hasItems && name && phone && area && branch);
 
   // ✅ مطلوب: الزر يفضل شغال (مش disabled)
   btn.classList.toggle('btn-disabled', !ok);
@@ -878,17 +1070,20 @@ async function checkoutWhatsApp() {
   const nameInput = document.getElementById('c-name');
   const phoneInput = document.getElementById('c-phone');
   const areaSelect = document.getElementById('c-area');
+  const branchSelect = document.getElementById('c-branch');
   const addressInput = document.getElementById('c-address');
 
   const name = nameInput ? nameInput.value.trim() : '';
   const phone = phoneInput ? phoneInput.value.trim() : '';
   const area = areaSelect ? areaSelect.value : '';
+  const branch = branchSelect ? branchSelect.value : '';
   const address = addressInput ? addressInput.value.trim() : '';
 
   const missing = [];
-  if (!name)  missing.push({ label: 'الاسم', el: nameInput });
-  if (!phone) missing.push({ label: 'الموبايل', el: phoneInput });
-  if (!area)  missing.push({ label: 'المنطقة', el: areaSelect });
+  if (!name)   missing.push({ label: 'الاسم', el: nameInput });
+  if (!phone)  missing.push({ label: 'الموبايل', el: phoneInput });
+  if (!area)   missing.push({ label: 'المنطقة', el: areaSelect });
+  if (!branch) missing.push({ label: 'اختار الفرع الاقرب ليك', el: branchSelect });
 
  if (missing.length) {
   const msg = 'استكمل البيانات\n' + missing.map(m => `- ${m.label}`).join('\n');
@@ -906,9 +1101,11 @@ async function checkoutWhatsApp() {
     return;
   }
 
+  saveCheckoutData();
+
   await window.AlAshrafOrders.createOrderFromCheckout({
     cart,
-    customer: { name, phone, area, address },
+    customer: { name, phone, area, branch, address },
     whatsappNumber: WHATSAPP_NUMBER,
     sourcePage: "index"
   });

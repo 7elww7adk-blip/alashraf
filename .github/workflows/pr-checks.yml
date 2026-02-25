@@ -1,0 +1,72 @@
+name: PR Checks
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  pr-checks:
+    name: PR Checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify required files exist
+        shell: bash
+        run: |
+          set -euo pipefail
+          required_files=(
+            "index.html"
+            "orders.html"
+            "ramadan.html"
+            "style.css"
+            "script.js"
+            "orders.js"
+            "ramadan.js"
+          )
+
+          for file in "${required_files[@]}"; do
+            if [[ ! -f "$file" ]]; then
+              echo "Missing required file: $file"
+              exit 1
+            fi
+          done
+
+      - name: Ensure required files are not empty
+        shell: bash
+        run: |
+          set -euo pipefail
+          required_files=(
+            "index.html"
+            "orders.html"
+            "ramadan.html"
+            "style.css"
+            "script.js"
+            "orders.js"
+            "ramadan.js"
+          )
+
+          for file in "${required_files[@]}"; do
+            if [[ ! -s "$file" ]]; then
+              echo "File is empty: $file"
+              exit 1
+            fi
+          done
+
+      - name: Check for unresolved merge markers
+        shell: bash
+        run: |
+          set -euo pipefail
+          if rg -n "^(<<<<<<<|=======|>>>>>>>)" index.html orders.html ramadan.html style.css script.js orders.js ramadan.js; then
+            echo "Unresolved merge markers detected"
+            exit 1
+          fi

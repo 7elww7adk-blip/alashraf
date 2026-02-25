@@ -2,19 +2,13 @@
    style.css - Clean Version 🎨
    ========================================================= */
 
-/* 1. تعريف الفونت الخاص */
-@font-face {
-    font-family: 'MyBrandFont';             
-    src: url('fonts/MyFont.ttf') format('truetype'); 
-    font-weight: normal; font-style: normal;
-}
-
+/* 1. الخط الافتراضي */
 @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@500;700&display=swap');
 
 :root {
-    --main-font: 'Cairo', sans-serif;
-    --heading-font: 'MyBrandFont', sans-serif; 
+    --main-font: system-ui, -apple-system, "Segoe UI", Tahoma, Arial, sans-serif;
+    --heading-font: system-ui, -apple-system, "Segoe UI", Tahoma, Arial, sans-serif;
     --cream-bg: #F9F7F2;
     --olive-green: #68592e;   
     --deep-brown: #3E2723;
@@ -23,6 +17,10 @@
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; outline: none; }
+html, body {
+    font-family: system-ui, -apple-system, "Segoe UI", Tahoma, Arial, sans-serif;
+}
+
 body { 
     font-family: var(--main-font); 
     background-color: var(--cream-bg); 
@@ -121,7 +119,7 @@ h1, h2, h3, .hero-text h1, .section-header h2, .cat-title, .mosaic-content h3, .
 .hero-watermark-logo { position: absolute; left: 5%; top: 50%; transform: translateY(-50%); height: 280px; width: auto; filter: brightness(0) invert(1); opacity: 0.3; z-index: 1; pointer-events: none; transition: 0.5s; }
 
 /* Compact Brown Footer Base */
-.compact-footer { background-color: var(--deep-brown); background-image: url('image/pattern.png'); background-blend-mode: overlay; padding: 25px 0 10px; margin-top: 40px; border-top: 4px solid var(--gold); color: #fff; font-size: 0.9rem; }
+.compact-footer { background-color: var(--deep-brown); background-image: url('image/pattern.jpg'); background-blend-mode: overlay; padding: 25px 0 10px; margin-top: 40px; border-top: 4px solid var(--gold); color: #fff; font-size: 0.9rem; }
 .brand-side h4 { color: var(--gold); margin-bottom: 8px; font-size: 1.1rem; }
 .social-mini { display: flex; gap: 10px; }
 .social-mini a { color: #ddd; text-decoration: none; font-size: 0.85rem; border: 1px solid rgba(255,255,255,0.2); padding: 3px 10px; border-radius: 20px; transition: 0.3s; }

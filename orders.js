@@ -323,7 +323,7 @@ function renderOrderDetails(order) {
   const statusPill = ``; // الحالة ثابتة عندكم ومش هتتغير — مش هنظهرها
   const syncPill = (order.sync?.status === "synced")
     ? `<span class="order-pill ok">متسجل ✅</span>`
-    : `<span class="order-pill warn">غير متزامن ⏳</span>`;
+    : `<span class="order-pill ok">تم إستلام الطلب</span>`;
 
   const itemsHtml = (order.items || []).map((it) => {
     const title = it.variant ? `${it.name} (${it.variant})` : it.name;

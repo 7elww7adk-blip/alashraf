@@ -8,7 +8,7 @@
     <title>الأشراف - البيت السوري</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <link rel="icon" type="image/png" href="image/logo.png">
     <!-- Open Graph (صورة اللينك عند المشاركة) -->
@@ -36,7 +36,7 @@
             <div class="container top-flex">
                 <div class="right-part">
                     <a href="#" onclick="showCategories()" class="logo-box"> 
-                        <img src="image/logo.png" alt="الأشراف" onerror="this.src='image/logo.jpg'">
+                        <img src="image/logo.png" alt="الأشراف" >
                     </a>
                     <div class="menu-trigger" onclick="showCategories('cats')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;">
@@ -190,6 +190,18 @@
         </div>
     </section>
 
+    <section class="products-display" id="daily-offers">
+        <div class="container">
+            <div class="section-header">
+                <h2>عروض اليوم</h2>
+                <div class="line"></div>
+            </div>
+            <div class="classic-grid" id="daily-offers-list">
+                <p style="text-align:center; width:100%;">جاري تحميل عروض اليوم...</p>
+            </div>
+        </div>
+    </section>
+
 <section class="products-display" id="products-area" style="display: none;">
         <div class="container">
             
@@ -280,6 +292,15 @@
         <option value="الشروق">الشروق</option>
         <option value="وصال">وصال</option>
         <option value="مدينتي">مدينتي</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <select id="c-branch">
+        <option value="" disabled selected>اختار الفرع الاقرب ليك</option>
+        <option value="جراند مول - الشروق 2">جراند مول - الشروق 2</option>
+        <option value="تاون سنتر - الشروق 2">تاون سنتر - الشروق 2</option>
+        <option value="شل أوت - الحي السابع">شل أوت - الحي السابع</option>
       </select>
     </div>
 

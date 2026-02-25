@@ -52,6 +52,25 @@ function getKiloVariant(variantsList) {
   return variantsList.find(v => v.grams === 1000 || (v.label || '').includes('1 كيلو')) || null;
 }
 
+function isYes(val) {
+  const s = (val ?? '').toString().trim().toLowerCase();
+  return ['نعم', 'yes', 'true', '1', 'y', 'ok'].includes(s);
+}
+
+function isRamadanOffer(p) {
+  if (!p || typeof p !== 'object') return false;
+  return isYes(p.ramadan_offer || p.ramadanOffer || p['عرض رمضان'] || p['ramadan offer']);
+}
+
+function getOfferBasePrice(p) {
+  const variantsList = parseVariants(p);
+  if (variantsList?.length) {
+    const kilo = getKiloVariant(variantsList);
+    return kilo?.price > 0 ? kilo.price : 0;
+  }
+  return toNumber(p?.price);
+}
+
 
 /* =========================================================
    ramadan.js - صفحة رمضان 🌙 (مُحدّث: Variants + أمان أعلى)
@@ -282,7 +301,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (hasCache) {
     ramadanYameesh = cached.filter(p => (p.category || '').toString().trim() === 'ياميش رمضان');
     ramadanSweets  = cached.filter(p => (p.category || '').toString().trim() === 'حلويات رمضان');
-    ramadanOffers  = cached.filter(p => getDiscountAfterPrice(p) > 0);
+    ramadanOffers  = cached.filter(p => isRamadanOffer(p) && getDiscountAfterPrice(p) > 0 && getOfferBasePrice(p) > getDiscountAfterPrice(p));
     allRamadanProds = [...ramadanYameesh, ...ramadanSweets];
 
       __productsLoading = false;
@@ -340,7 +359,7 @@ async function fetchRamadanProducts(opts = {}) {
       saveRamadanCache(fresh, newHash);
       ramadanYameesh = fresh.filter(p => (p.category || '').toString().trim() === 'ياميش رمضان');
       ramadanSweets  = fresh.filter(p => (p.category || '').toString().trim() === 'حلويات رمضان');
-      ramadanOffers  = fresh.filter(p => getDiscountAfterPrice(p) > 0);
+      ramadanOffers  = fresh.filter(p => isRamadanOffer(p) && getDiscountAfterPrice(p) > 0 && getOfferBasePrice(p) > getDiscountAfterPrice(p));
       allRamadanProds = [...ramadanYameesh, ...ramadanSweets];
 
       __productsLoading = false;
@@ -359,7 +378,7 @@ async function fetchRamadanProducts(opts = {}) {
       saveRamadanCache(fresh, newHash);
       ramadanYameesh = fresh.filter(p => (p.category || '').toString().trim() === 'ياميش رمضان');
       ramadanSweets  = fresh.filter(p => (p.category || '').toString().trim() === 'حلويات رمضان');
-      ramadanOffers  = fresh.filter(p => getDiscountAfterPrice(p) > 0);
+      ramadanOffers  = fresh.filter(p => isRamadanOffer(p) && getDiscountAfterPrice(p) > 0 && getOfferBasePrice(p) > getDiscountAfterPrice(p));
       allRamadanProds = [...ramadanYameesh, ...ramadanSweets];
 
       __productsLoading = false;
@@ -511,7 +530,7 @@ function createRamadanOfferCard(p) {
   const variantsList = parseVariants(p);
   const hasVariants = !!variantsList;
 
-  let oldPrice = Number(p.price) || 0;
+  let oldPrice = getOfferBasePrice(p);
   let offerVariantLabel = '';
   let offerVariantForCart = '';
 
@@ -519,10 +538,11 @@ function createRamadanOfferCard(p) {
   if (hasVariants) {
     const kilo = getKiloVariant(variantsList);
     if (!kilo || !(kilo.price > 0)) return '';
-    oldPrice = kilo.price;
     offerVariantLabel = kilo.label || '1 كيلو';
     offerVariantForCart = offerVariantLabel;
   }
+
+  if (!isRamadanOffer(p) || !(oldPrice > 0) || !(newPrice < oldPrice)) return '';
 
   return `
     <div class="product-card offer-card"

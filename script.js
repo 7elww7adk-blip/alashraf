@@ -223,6 +223,25 @@ function getKiloVariant(variantsList) {
   return variantsList.find(v => v.grams === 1000 || (v.label || '').includes('1 كيلو')) || null;
 }
 
+function isYes(val) {
+  const s = (val ?? '').toString().trim().toLowerCase();
+  return ['نعم', 'yes', 'true', '1', 'y', 'ok'].includes(s);
+}
+
+function isDailyOffer(p) {
+  if (!p || typeof p !== 'object') return false;
+  return isYes(p.daily_offer || p.dailyOffer || p['عرض اليوم'] || p['daily offer']);
+}
+
+function getOfferBasePrice(p) {
+  const variantsList = parseVariants(p);
+  if (variantsList?.length) {
+    const kilo = getKiloVariant(variantsList);
+    return kilo?.price > 0 ? kilo.price : 0;
+  }
+  return toNumber(p?.price);
+}
+
 function loadCheckoutData() {
   try {
     return JSON.parse(localStorage.getItem(CHECKOUT_DATA_KEY) || '{}') || {};
@@ -511,19 +530,12 @@ function renderDailyOffers() {
   if (!list) return;
 
   const offers = (allProducts || []).filter(p => {
+    if (!isDailyOffer(p)) return false;
+
     const after = getDiscountAfterPrice(p);
-    if (!(after > 0)) return false;
+    const original = getOfferBasePrice(p);
 
-    const variantsList = parseVariants(p);
-    if (variantsList?.length) {
-      const kilo = getKiloVariant(variantsList);
-      if (!kilo || !(kilo.price > 0)) return false;
-      return after < kilo.price;
-    }
-
-    const original = toNumber(p.price);
-    if (!(original > 0)) return false;
-    return after < original;
+    return after > 0 && original > 0 && original > after;
   });
 
   if (!offers.length) {
@@ -542,19 +554,18 @@ function createDailyOfferCard(p) {
   if (!newPrice) return '';
 
   const variantsList = parseVariants(p);
-  let oldPrice = toNumber(p.price);
+  let oldPrice = getOfferBasePrice(p);
   let offerVariantLabel = '';
   let offerVariantForCart = '';
 
   if (variantsList?.length) {
     const kilo = getKiloVariant(variantsList);
     if (!kilo || !(kilo.price > 0)) return '';
-    oldPrice = kilo.price;
     offerVariantLabel = kilo.label || '1 كيلو';
     offerVariantForCart = offerVariantLabel;
   }
 
-  if (!(oldPrice > 0) || !(newPrice < oldPrice)) return '';
+  if (!(oldPrice > 0) || !(newPrice < oldPrice) || !isDailyOffer(p)) return '';
 
   return `
     <div class="product-card offer-card"

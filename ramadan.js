@@ -62,13 +62,22 @@ function isRamadanOffer(p) {
   return isYes(p.ramadan_offer || p.ramadanOffer || p['عرض رمضان'] || p['ramadan offer']);
 }
 
-function getOfferBasePrice(p) {
+function pickOfferVariant(variantsList) {
+  if (!variantsList || !variantsList.length) return null;
+  return getKiloVariant(variantsList) || variantsList[0];
+}
+
+function getOfferTarget(p) {
   const variantsList = parseVariants(p);
   if (variantsList?.length) {
-    const kilo = getKiloVariant(variantsList);
-    return kilo?.price > 0 ? kilo.price : 0;
+    const chosenVariant = pickOfferVariant(variantsList);
+    if (!chosenVariant || !(chosenVariant.price > 0)) return null;
+    return { basePrice: chosenVariant.price, variantLabel: chosenVariant.label || '' };
   }
-  return toNumber(p?.price);
+
+  const basePrice = toNumber(p?.price);
+  if (!(basePrice > 0)) return null;
+  return { basePrice, variantLabel: '' };
 }
 
 
@@ -301,7 +310,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (hasCache) {
     ramadanYameesh = cached.filter(p => (p.category || '').toString().trim() === 'ياميش رمضان');
     ramadanSweets  = cached.filter(p => (p.category || '').toString().trim() === 'حلويات رمضان');
-    ramadanOffers  = cached.filter(p => isRamadanOffer(p) && getDiscountAfterPrice(p) > 0 && getOfferBasePrice(p) > getDiscountAfterPrice(p));
+    ramadanOffers  = cached.filter(p => isRamadanOffer(p) && getDiscountAfterPrice(p) > 0 && (getOfferTarget(p)?.basePrice || 0) >= getDiscountAfterPrice(p));
     allRamadanProds = [...ramadanYameesh, ...ramadanSweets];
 
       __productsLoading = false;
@@ -359,7 +368,7 @@ async function fetchRamadanProducts(opts = {}) {
       saveRamadanCache(fresh, newHash);
       ramadanYameesh = fresh.filter(p => (p.category || '').toString().trim() === 'ياميش رمضان');
       ramadanSweets  = fresh.filter(p => (p.category || '').toString().trim() === 'حلويات رمضان');
-      ramadanOffers  = fresh.filter(p => isRamadanOffer(p) && getDiscountAfterPrice(p) > 0 && getOfferBasePrice(p) > getDiscountAfterPrice(p));
+      ramadanOffers  = fresh.filter(p => isRamadanOffer(p) && getDiscountAfterPrice(p) > 0 && (getOfferTarget(p)?.basePrice || 0) >= getDiscountAfterPrice(p));
       allRamadanProds = [...ramadanYameesh, ...ramadanSweets];
 
       __productsLoading = false;
@@ -378,7 +387,7 @@ async function fetchRamadanProducts(opts = {}) {
       saveRamadanCache(fresh, newHash);
       ramadanYameesh = fresh.filter(p => (p.category || '').toString().trim() === 'ياميش رمضان');
       ramadanSweets  = fresh.filter(p => (p.category || '').toString().trim() === 'حلويات رمضان');
-      ramadanOffers  = fresh.filter(p => isRamadanOffer(p) && getDiscountAfterPrice(p) > 0 && getOfferBasePrice(p) > getDiscountAfterPrice(p));
+      ramadanOffers  = fresh.filter(p => isRamadanOffer(p) && getDiscountAfterPrice(p) > 0 && (getOfferTarget(p)?.basePrice || 0) >= getDiscountAfterPrice(p));
       allRamadanProds = [...ramadanYameesh, ...ramadanSweets];
 
       __productsLoading = false;
@@ -527,20 +536,14 @@ function createRamadanOfferCard(p) {
   const newPrice = getDiscountAfterPrice(p);
   if (!newPrice) return '';
 
-  const variantsList = parseVariants(p);
-  const hasVariants = !!variantsList;
+  const target = getOfferTarget(p);
+  if (!target) return '';
 
-  let oldPrice = getOfferBasePrice(p);
-  let offerVariantLabel = '';
-  let offerVariantForCart = '';
+  const oldPrice = target.basePrice;
+  const offerVariantLabel = target.variantLabel;
+  const offerVariantForCart = offerVariantLabel;
 
-  // لو المنتج له أوزان: العرض للكيو فقط
-  if (hasVariants) {
-    const kilo = getKiloVariant(variantsList);
-    if (!kilo || !(kilo.price > 0)) return '';
-    offerVariantLabel = kilo.label || '1 كيلو';
-    offerVariantForCart = offerVariantLabel;
-  }
+  if (!isRamadanOffer(p) || !(newPrice <= oldPrice)) return '';
 
   if (!isRamadanOffer(p) || !(oldPrice > 0) || !(newPrice < oldPrice)) return '';
 
@@ -561,10 +564,10 @@ function createRamadanOfferCard(p) {
       <div class="info">
         <h4>${escapeHtml(nameRaw)}</h4>
 
-        ${offerVariantLabel ? `<div class="offer-variant-pill">${escapeHtml(offerVariantLabel)}</div>` : ''}
+        ${offerVariantLabel ? `<div class="offer-variant-pill">عرض على: ${escapeHtml(offerVariantLabel)}</div>` : ''}
 
         <span class="price js-price">${newPrice} ج.م</span>
-        <div class="old-price"><s>${oldPrice} ج.م</s>${offerVariantLabel ? ' / كيلو' : ''}</div>
+        <div class="old-price"><s>${oldPrice} ج.م</s></div>
 
         <button class="add-btn js-add-to-cart" type="button">أضف لسلة رمضان</button>
       </div>

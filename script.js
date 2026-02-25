@@ -233,13 +233,22 @@ function isDailyOffer(p) {
   return isYes(p.daily_offer || p.dailyOffer || p['عرض اليوم'] || p['daily offer']);
 }
 
-function getOfferBasePrice(p) {
+function pickOfferVariant(variantsList) {
+  if (!variantsList || !variantsList.length) return null;
+  return getKiloVariant(variantsList) || variantsList[0];
+}
+
+function getOfferTarget(p) {
   const variantsList = parseVariants(p);
   if (variantsList?.length) {
-    const kilo = getKiloVariant(variantsList);
-    return kilo?.price > 0 ? kilo.price : 0;
+    const chosenVariant = pickOfferVariant(variantsList);
+    if (!chosenVariant || !(chosenVariant.price > 0)) return null;
+    return { basePrice: chosenVariant.price, variantLabel: chosenVariant.label || '' };
   }
-  return toNumber(p?.price);
+
+  const basePrice = toNumber(p?.price);
+  if (!(basePrice > 0)) return null;
+  return { basePrice, variantLabel: '' };
 }
 
 function loadCheckoutData() {
@@ -533,9 +542,10 @@ function renderDailyOffers() {
     if (!isDailyOffer(p)) return false;
 
     const after = getDiscountAfterPrice(p);
-    const original = getOfferBasePrice(p);
+    const target = getOfferTarget(p);
+    if (!target) return false;
 
-    return after > 0 && original > 0 && original > after;
+    return after > 0 && target.basePrice >= after;
   });
 
   if (!offers.length) {
@@ -553,19 +563,14 @@ function createDailyOfferCard(p) {
   const newPrice = getDiscountAfterPrice(p);
   if (!newPrice) return '';
 
-  const variantsList = parseVariants(p);
-  let oldPrice = getOfferBasePrice(p);
-  let offerVariantLabel = '';
-  let offerVariantForCart = '';
+  const target = getOfferTarget(p);
+  if (!target) return '';
 
-  if (variantsList?.length) {
-    const kilo = getKiloVariant(variantsList);
-    if (!kilo || !(kilo.price > 0)) return '';
-    offerVariantLabel = kilo.label || '1 كيلو';
-    offerVariantForCart = offerVariantLabel;
-  }
+  const oldPrice = target.basePrice;
+  const offerVariantLabel = target.variantLabel;
+  const offerVariantForCart = offerVariantLabel;
 
-  if (!(oldPrice > 0) || !(newPrice < oldPrice) || !isDailyOffer(p)) return '';
+  if (!(newPrice <= oldPrice) || !isDailyOffer(p)) return '';
 
   return `
     <div class="product-card offer-card"
@@ -584,10 +589,10 @@ function createDailyOfferCard(p) {
       <div class="info">
         <h4>${escapeHtml(nameRaw)}</h4>
 
-        ${offerVariantLabel ? `<div class="offer-variant-pill">${escapeHtml(offerVariantLabel)}</div>` : ''}
+        ${offerVariantLabel ? `<div class="offer-variant-pill">عرض على: ${escapeHtml(offerVariantLabel)}</div>` : ''}
 
         <span class="price js-price">${newPrice} ج.م</span>
-        <div class="old-price"><s>${oldPrice} ج.م</s>${offerVariantLabel ? ' / كيلو' : ''}</div>
+        <div class="old-price"><s>${oldPrice} ج.م</s></div>
 
         <button class="add-btn js-add-to-cart" type="button">أضف للسلة</button>
       </div>

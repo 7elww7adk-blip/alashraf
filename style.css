@@ -2310,3 +2310,36 @@ body.loading {
   .category-banner-title{ font-size: 1.15rem; }
   .category-banner-content{ padding:14px 14px; }
 }
+
+/* =========================
+   Price Emphasis (بدون تغيير التصميم)
+   ========================= */
+.price,
+.js-price,
+.price-strong,
+.cart-item-sub,
+.cart-line-total,
+#cartTotal,
+.total-row,
+.orders-total,
+.orders-total b {
+  font-weight: 700;
+}
+
+/* السعر الحالي / بعد الخصم يكون الأوضح */
+.price,
+.js-price,
+#cartTotal,
+.orders-total b,
+.cart-line-total {
+  font-weight: 800;
+}
+
+/* السعر القديم أقل بروزاً مع الحفاظ على الشطب */
+.old-price {
+  font-weight: 600;
+  opacity: .75;
+}
+.old-price s {
+  text-decoration: line-through;
+}

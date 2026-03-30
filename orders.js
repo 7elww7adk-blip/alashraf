@@ -38,16 +38,65 @@ function normalizeOrderId(id) {
   return s;
 }
 
+function normalizeSyncState(sync) {
+  const status = (sync && typeof sync.status === "string") ? sync.status : "pending";
+  if (status === "synced" || status === "pending" || status === "failed") {
+    return {
+      status,
+      at: (sync && sync.at) ? String(sync.at) : nowISO(),
+      error: (sync && sync.error) ? String(sync.error) : ""
+    };
+  }
+  return { status: "pending", at: nowISO(), error: "" };
+}
+
+function normalizeOrderRecord(order) {
+  if (!order || typeof order !== "object") return null;
+  const orderId = normalizeOrderId(order.orderId || order.id || "");
+  if (!orderId) return null;
+
+  const items = Array.isArray(order.items) ? order.items : [];
+  const normalizedItems = items.map((it) => ({
+    name: (it?.name || "").toString(),
+    variant: (it?.variant || "").toString(),
+    price: Math.max(0, Number(it?.price) || 0),
+    quantity: Math.max(1, Number(it?.quantity) || 1),
+    image: (it?.image || "").toString()
+  })).filter(it => it.name.trim() !== "");
+
+  return {
+    orderId,
+    deliveryCode: (order.deliveryCode || "").toString(),
+    createdAt: (order.createdAt || nowISO()).toString(),
+    dateText: (order.dateText || "").toString(),
+    status: (order.status || "قيد التحضير").toString(),
+    sourcePage: (order.sourcePage || "").toString(),
+    customer: {
+      name: (order.customer?.name || "").toString(),
+      phone: (order.customer?.phone || "").toString(),
+      area: (order.customer?.area || "").toString(),
+      branch: (order.customer?.branch || "").toString(),
+      address: (order.customer?.address || "").toString()
+    },
+    items: normalizedItems,
+    sync: normalizeSyncState(order.sync)
+  };
+}
+
 function loadOrders() {
   try {
     const raw = localStorage.getItem(ORDERS_KEY);
     const arr = raw ? JSON.parse(raw) : [];
-    return Array.isArray(arr) ? arr : [];
+    if (!Array.isArray(arr)) return [];
+    return arr.map(normalizeOrderRecord).filter(Boolean);
   } catch { return []; }
 }
 
 function saveOrders(list) {
-  localStorage.setItem(ORDERS_KEY, JSON.stringify(list));
+  try {
+    const safe = Array.isArray(list) ? list.map(normalizeOrderRecord).filter(Boolean) : [];
+    localStorage.setItem(ORDERS_KEY, JSON.stringify(safe));
+  } catch (_) {}
 }
 
 function upsertOrder(order) {
@@ -59,11 +108,17 @@ function upsertOrder(order) {
 }
 
 function setLastOrderId(orderId) {
-  localStorage.setItem(LAST_ORDER_ID_KEY, orderId);
+  try {
+    localStorage.setItem(LAST_ORDER_ID_KEY, normalizeOrderId(orderId));
+  } catch (_) {}
 }
 
 function getLastOrderId() {
-  return localStorage.getItem(LAST_ORDER_ID_KEY) || "";
+  try {
+    return normalizeOrderId(localStorage.getItem(LAST_ORDER_ID_KEY) || "");
+  } catch (_) {
+    return "";
+  }
 }
 
 function calcTotals(items) {
@@ -172,11 +227,11 @@ async function syncOne(order) {
       upsertOrder(order);
       return true;
     }
-    order.sync = { status:"pending", at: nowISO() };
+    order.sync = { status:"failed", at: nowISO(), error: String(r?.error || "sync_not_confirmed") };
     upsertOrder(order);
     return false;
   } catch (e) {
-    order.sync = { status:"pending", at: nowISO(), error: String(e) };
+    order.sync = { status:"failed", at: nowISO(), error: String(e) };
     upsertOrder(order);
     return false;
   }
@@ -236,59 +291,59 @@ function buildWhatsAppMessage(order) {
 window.AlAshrafOrders = {
   createOrderFromCheckout: async function({ cart, customer, whatsappNumber, sourcePage }) {
     // منع الضغط مرتين (double submit)
-    if (window.__alashraf_checkout_lock) return;
+    if (window.__alashraf_checkout_lock) return { skipped: true, reason: "locked" };
     window.__alashraf_checkout_lock = true;
+    try {
+      const d = new Date();
+      const orderId = makeOrderId();
+      const deliveryCode = makeDeliveryCode();
 
-    const d = new Date();
-    const orderId = makeOrderId();
-    const deliveryCode = makeDeliveryCode();
+      const items = (cart || []).map(it => ({
+        name: it.name,
+        variant: it.variant || "",
+        price: Math.max(0, Number(it.price) || 0),
+        quantity: Math.max(1, Number(it.quantity) || 1),
+        image: it.image || ""
+      }));
 
-    const items = (cart || []).map(it => ({
-      name: it.name,
-      variant: it.variant || "",
-      price: Number(it.price) || 0,
-      quantity: Number(it.quantity) || 0,
-      image: it.image || ""
-    }));
+      const order = {
+        orderId,
+        deliveryCode,
+        createdAt: nowISO(),
+        dateText: `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`,
+        status: "قيد التحضير",
+        sourcePage: sourcePage || "",
+        customer: {
+          name: customer?.name || "",
+          phone: customer?.phone || "",
+          area: customer?.area || "",
+          branch: customer?.branch || "",
+          address: customer?.address || ""
+        },
+        items,
+        sync: { status: "pending", at: nowISO() }
+      };
 
-    const order = {
-      orderId,
-      deliveryCode,
-      createdAt: nowISO(),
-      dateText: `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`,
-      status: "قيد التحضير",
-      sourcePage: sourcePage || "",
-      customer: {
-        name: customer?.name || "",
-        phone: customer?.phone || "",
-        area: customer?.area || "",
-        branch: customer?.branch || "",
-        address: customer?.address || ""
-      },
-      items,
-      sync: { status: "pending", at: nowISO() }
-    };
+      upsertOrder(order);
+      setLastOrderId(orderId);
 
-    upsertOrder(order);
-    setLastOrderId(orderId);
+      // مزامنة في الخلفية بدون تعطيل نفس التدفق الحالي
+      syncOne(order).catch(() => {});
 
-    // ✅ سجل في الشيت (Form submit) قبل التحويل لصفحة الطلبات
-    // لو حوّلنا فورًا ممكن المتصفح يلغي الطلب، لذلك هنأخر التحويل شوية.
-    try { postToSheet(order); } catch (e) { /* ignore */ }
+      // افتح واتساب
+      const msg = buildWhatsAppMessage(order);
+      const encodedMsg = encodeURIComponent(msg);
+      window.open(`https://wa.me/${whatsappNumber}?text=${encodedMsg}`, "_blank");
 
-    // افتح واتساب
-    const msg = buildWhatsAppMessage(order);
-    const encodedMsg = encodeURIComponent(msg);
-    window.open(`https://wa.me/${whatsappNumber}?text=${encodedMsg}`, "_blank");
+      // افتح صفحة الطلبات (نفس التاب) بعد تأخير بسيط لضمان وصول الإرسال
+      setTimeout(() => {
+        window.location.href = `orders.html?order=${encodeURIComponent(orderId)}`;
+      }, 700);
 
-    // افتح صفحة الطلبات (نفس التاب) بعد تأخير بسيط لضمان وصول POST
-    setTimeout(() => {
-      window.location.href = `orders.html?order=${encodeURIComponent(orderId)}`;
-    }, 700);
-
-    setTimeout(() => { window.__alashraf_checkout_lock = false; }, 5000);
-
-    return order;
+      return order;
+    } finally {
+      setTimeout(() => { window.__alashraf_checkout_lock = false; }, 5000);
+    }
   },
 
   loadOrders,
@@ -321,9 +376,14 @@ function renderOrderDetails(order) {
   const { totalAmount, totalQty } = calcTotals(order.items);
 
   const statusPill = ``; // الحالة ثابتة عندكم ومش هتتغير — مش هنظهرها
-  const syncPill = (order.sync?.status === "synced")
-    ? `<span class="order-pill ok">متسجل ✅</span>`
-    : `<span class="order-pill ok">تم إستلام الطلب</span>`;
+  let syncPill = `<span class="order-pill ok">تم إستلام الطلب</span>`;
+  if (order.sync?.status === "synced") {
+    syncPill = `<span class="order-pill ok">متسجل ✅</span>`;
+  } else if (order.sync?.status === "failed") {
+    syncPill = `<span class="order-pill warn">تعذر المزامنة - سيتم إعادة المحاولة</span>`;
+  } else if (order.sync?.status === "pending") {
+    syncPill = `<span class="order-pill warn">جارٍ تسجيل الطلب...</span>`;
+  }
 
   const itemsHtml = (order.items || []).map((it) => {
     const title = it.variant ? `${it.name} (${it.variant})` : it.name;
@@ -387,8 +447,9 @@ function renderOrdersList(orders, q="") {
   const list = document.getElementById("ordersList");
   if (!list) return;
 
+  const allOrders = Array.isArray(orders) ? orders : [];
   const qq = (q || "").trim().toLowerCase();
-  const filtered = !qq ? orders : orders.filter(o => {
+  const filtered = !qq ? allOrders : allOrders.filter(o => {
     const hay = [
       o.orderId, o.deliveryCode, o.customer?.name, o.customer?.phone, o.customer?.area, o.customer?.branch,
       ...(o.items||[]).map(i => i.name + " " + (i.variant||""))
@@ -397,13 +458,15 @@ function renderOrdersList(orders, q="") {
   });
 
   if (!filtered.length) {
-    list.innerHTML = `<div class="orders-card">لا توجد نتائج.</div>`;
+    list.innerHTML = qq
+      ? `<div class="orders-card">لا توجد نتائج مطابقة للبحث.</div>`
+      : `<div class="orders-card">لا توجد طلبات محفوظة حالياً.</div>`;
     return;
   }
 
   list.innerHTML = filtered.map(o => {
     const { totalAmount, totalQty } = calcTotals(o.items);
-    const sync = (o.sync?.status === "synced") ? "✅" : "⏳";
+    const sync = (o.sync?.status === "synced") ? "✅" : (o.sync?.status === "failed" ? "⚠️" : "⏳");
     return `
       <button class="order-row" type="button" data-oid="${escapeHtml(normalizeOrderId(o.orderId))}">
         <div class="order-row-title">طلب ${escapeHtml(normalizeOrderId(o.orderId))} ${sync}</div>
@@ -434,40 +497,22 @@ document.addEventListener("DOMContentLoaded", () => {
   const rawOid = url.searchParams.get("order") || getLastOrderId();
   const oid = normalizeOrderId(rawOid);
   const current = orders.find(o => normalizeOrderId(o.orderId) === oid) || orders[0];
+  const search = document.getElementById("ordersSearch");
 
   renderOrderDetails(current || null);
   renderOrdersList(orders);
 
-  const search = document.getElementById("ordersSearch");
+  // إعادة محاولة صامتة لأي طلبات pending/failed عند فتح صفحة الطلبات
+  syncPending().then(() => {
+    const all = loadOrders();
+    const cur = all.find(o => normalizeOrderId(o.orderId) === oid) || all[0];
+    renderOrderDetails(cur || null);
+    renderOrdersList(all, search?.value || "");
+  }).catch(() => {});
+
   if (search) {
     search.addEventListener("input", () => {
       renderOrdersList(loadOrders(), search.value);
-    });
-  }
-
-  const retry = document.getElementById("retrySyncBtn");
-  if (retry) {
-    retry.addEventListener("click", async () => {
-      retry.disabled = true;
-      const r = await syncPending();
-      alert(`تمت المحاولة: ${r.total} | نجح: ${r.ok}`);
-      retry.disabled = false;
-
-      const all = loadOrders();
-      const cur = all.find(o => o.orderId === (oid || getLastOrderId())) || all[0];
-      renderOrderDetails(cur || null);
-      renderOrdersList(all, search?.value || "");
-    });
-  }
-
-  const clearBtn = document.getElementById("clearOrdersBtn");
-  if (clearBtn) {
-    clearBtn.addEventListener("click", () => {
-      if (!confirm("متأكد؟ ده هيمسح الطلبات من الجهاز فقط.")) return;
-      localStorage.removeItem(ORDERS_KEY);
-      localStorage.removeItem(LAST_ORDER_ID_KEY);
-      renderOrderDetails(null);
-      renderOrdersList([]);
     });
   }
 });

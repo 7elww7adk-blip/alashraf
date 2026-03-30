@@ -76,7 +76,6 @@
        <div class="bottom-bar">
             <div class="container">
                 <nav class="cat-links">
-                    <a href="ramadan.html" class="ramadan-nav-pill">ياميش رمضان 2026</a>
                     <a href="#" onclick="openCategory('ركن الحلويات الشرقية')">حلويات شرقية</a>
                     <a href="#" onclick="openCategory('ركن المحمصة والتسالي')">المكسرات</a>
                     <a href="#" onclick="openCategory('ركن المجمدات والجبن السوري')">أجبان ومجمدات</a>
@@ -102,7 +101,7 @@
         </div>
     </section>
 
-        <section class="category-banners-section" id="category-banners">
+        <section class="category-banners-section" id="categories-area">
         <div class="container">
             <div class="section-header">
                 <h2>تسوق حسب القسم</h2>
@@ -202,25 +201,13 @@
         </div>
     </section>
 
-    <section class="products-display" id="daily-offers">
-        <div class="container">
-            <div class="section-header">
-                <h2>عروض اليوم</h2>
-                <div class="line"></div>
-            </div>
-            <div class="classic-grid" id="daily-offers-list">
-                <p style="text-align:center; width:100%;">جاري تحميل عروض اليوم...</p>
-            </div>
-        </div>
-    </section>
-
 <section class="products-display" id="products-area" style="display: none;">
         <div class="container">
-            
-            <button class="back-btn" onclick="showCategories('cats')">↩ العودة للأقسام</button>
-            
-            <div class="section-header">
-                <h2 id="current-category-title">المنتجات</h2>
+            <div class="section-header" id="products-header-anchor">
+                <div class="products-head-row">
+                    <button class="back-btn" onclick="showCategories('cats')">↩ العودة للأقسام</button>
+                    <h2 id="current-category-title">المنتجات</h2>
+                </div>
                 <div class="line"></div>
             </div>
 
@@ -286,52 +273,75 @@
   <div class="cart-items" id="cartItems"></div>
 
   <div class="cart-form">
-    <h4>بيانات الشحن 🚚</h4>
+      <div class="checkout-form-head">
+      <div class="checkout-step-meta">
+        <span id="checkoutStepBadge" class="checkout-step-badge">إتمام الطلب</span>
+        <button id="backToReviewBtn" class="back-review-btn" type="button" data-action="back-review-step">↩ الرجوع لمراجعة السلة</button>
+      </div>
+      <h4>بيانات الشحن 🚚</h4>
+      <p class="checkout-form-hint">الحقول المميزة بـ <b>*</b> مطلوبة لإرسال الطلب.</p>
+    </div>
 
-    <div class="form-group">
-      <input type="text" id="c-name" placeholder="الاسم بالكامل"
-             required>
+    <div class="checkout-grid checkout-grid-2">
+      <div class="form-group required-field" data-required="name">
+        <label for="c-name" class="checkout-label">الاسم بالكامل <span>*</span></label>
+        <input type="text" id="c-name" placeholder="اكتب الاسم بالكامل" autocomplete="name" required>
+      </div>
+
+      <div class="form-group required-field" data-required="phone">
+        <label for="c-phone" class="checkout-label">رقم الموبايل <span>*</span></label>
+        <input type="tel" id="c-phone" inputmode="tel" placeholder="مثال: 0100 000 0000" autocomplete="tel" required>
+      </div>
+    </div>
+
+    <div class="checkout-grid checkout-grid-2">
+      <div class="form-group required-field" data-required="area">
+        <label for="c-area" class="checkout-label">المنطقة <span>*</span></label>
+        <select id="c-area">
+          <option value="">اختر المنطقة</option>
+          <option value="الشروق">الشروق</option>
+          <option value="وصال">وصال</option>
+          <option value="مدينتي">مدينتي</option>
+        </select>
+      </div>
+
+      <div class="form-group required-field" data-required="branch">
+        <label for="c-branch" class="checkout-label">الفرع الأقرب <span>*</span></label>
+        <select id="c-branch">
+          <option value="" disabled selected>اختار الفرع الاقرب ليك</option>
+          <option value="جراند مول - الشروق 2">جراند مول - الشروق 2</option>
+          <option value="تاون سنتر - الشروق 2">تاون سنتر - الشروق 2</option>
+          <option value="شل أوت - الحي السابع">شل أوت - الحي السابع</option>
+        </select>
+      </div>
     </div>
 
     <div class="form-group">
-      <input type="tel" id="c-phone" placeholder="رقم الموبايل"
-             required>
-    </div>
-
-    <div class="form-group">
-      <select id="c-area">
-        <option value="">اختر المنطقة</option>
-        <option value="الشروق">الشروق</option>
-        <option value="وصال">وصال</option>
-        <option value="مدينتي">مدينتي</option>
-      </select>
-    </div>
-
-    <div class="form-group">
-      <select id="c-branch">
-        <option value="" disabled selected>اختار الفرع الاقرب ليك</option>
-        <option value="جراند مول - الشروق 2">جراند مول - الشروق 2</option>
-        <option value="تاون سنتر - الشروق 2">تاون سنتر - الشروق 2</option>
-        <option value="شل أوت - الحي السابع">شل أوت - الحي السابع</option>
-      </select>
-    </div>
-
-    <div class="form-group">
-      <textarea id="c-address" rows="2"
-                placeholder="العنوان بالتفصيل (اختياري)"></textarea>
+      <label for="c-address" class="checkout-label">العنوان بالتفصيل <small>(اختياري)</small></label>
+      <textarea id="c-address" rows="2" placeholder="اسم الشارع - رقم العمارة - علامة مميزة"></textarea>
     </div>
   </div>
 
   <div class="cart-footer">
     <div class="total">
+      <div id="cartStepHint" class="cart-step-hint">راجع السلة قبل إدخال بيانات الشحن</div>
       <div class="total-row">
-        الإجمالي: <span id="cartTotal">0</span> ج.م
+        <span class="total-label">الإجمالي</span>
+        <span class="total-amount-wrap">
+          <span id="cartTotal">0</span>
+          <span class="total-currency">ج.م</span>
+        </span>
       </div>
       <div class="cart-note">ملحوظة: السعر الإجمالي غير شامل التوصيل، وسيتم تحديده من خلال شات الواتساب.</div>
+      <div id="checkoutValidationMsg" class="cart-validation-msg" aria-live="polite"></div>
     </div>
+    <button id="proceedCheckoutStepBtn" class="checkout-btn checkout-step-btn" type="button" data-action="go-checkout-step">
+      الانتقال لإتمام الطلب
+    </button>
     <button id="checkoutBtn" class="checkout-btn" type="button" data-action="checkout">
       ✅ إرسال الطلب واتساب
     </button>
+    <div class="checkout-submit-help">سيتم فتح واتساب لتأكيد الطلب وإتمام التفاصيل.</div>
   </div>
 </div>
 

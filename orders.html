@@ -16,6 +16,7 @@
     .orders-actions{display:flex;gap:10px;flex-wrap:wrap;}
     .orders-card{background:#fff;border-radius:18px;box-shadow:0 8px 22px rgba(0,0,0,0.06);padding:14px;margin-top:10px;}
     .orders-meta{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px;color:var(--deep-brown);}
+    .orders-meta > div{min-width:0;overflow-wrap:anywhere;}
     .orders-pills{grid-column:1/-1;display:flex;gap:8px;flex-wrap:wrap;}
     .order-pill{display:inline-flex;align-items:center;padding:6px 10px;border-radius:999px;background:#f5efe4;border:1px solid #e0d4c0;font-weight:700;font-size:.85rem;}
     .order-pill.ok{background:#e9f7ef;border-color:#c7eed4;color:#1e7e34;}
@@ -29,6 +30,7 @@
     .order-row{width:100%;text-align:right;border:1px solid #f0e6d8;background:#fff;border-radius:16px;padding:12px 14px;cursor:pointer;box-shadow:0 8px 22px rgba(0,0,0,0.04);}
     .order-row-title{font-weight:700;color:var(--deep-brown);}
     .order-row-sub{opacity:.75;margin-top:4px;}
+    .order-row-title,.order-row-sub{overflow-wrap:anywhere;word-break:break-word;}
     @media (max-width:700px){.orders-meta{grid-template-columns:1fr;}}
   
     /* Mobile symmetry */
@@ -43,6 +45,8 @@
       .orders-items-head{justify-content:center;}
       .cart-item-row{justify-content:space-between;align-items:center;gap:10px;}
       .order-row{padding:12px;}
+      .search-part{width:100%;}
+      .search-part input{min-width:0;}
     }
 
   </style>
@@ -77,7 +81,7 @@
         </div>
 
         <div class="left-part">
-          <div class="menu-trigger" onclick="location.href='index.html#products'">
+          <div class="menu-trigger" onclick="location.href='index.html#categories-area'">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M6 7l1-3h10l1 3"></path>
               <path d="M3 7h18l-1.5 14H4.5L3 7z"></path>

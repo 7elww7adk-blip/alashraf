@@ -123,6 +123,11 @@ let currentCategoryProducts = [];
 let __productsFetchedOnce = false;
 let __productsLoading = true;
 let __pendingCategory = null;
+let __checkoutSubmitting = false;
+let __lastCheckoutValidationToastAt = 0;
+let __checkoutAttemptedSubmit = false;
+let __cartCheckoutStep = 1;
+const ADD_TO_CART_TOAST_MESSAGE = 'تمت الإضافة للسلة ✅';
  // لتخزين منتجات القسم الحالي للفلترة
 
 // ================== Helpers ==================
@@ -253,7 +258,8 @@ function getOfferTarget(p) {
 
 function loadCheckoutData() {
   try {
-    return JSON.parse(localStorage.getItem(CHECKOUT_DATA_KEY) || '{}') || {};
+    const parsed = JSON.parse(localStorage.getItem(CHECKOUT_DATA_KEY) || '{}');
+    return (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) ? parsed : {};
   } catch (_) { return {}; }
 }
 
@@ -287,36 +293,10 @@ function restoreCheckoutData() {
   });
 }
 
-function ensureSingleDailyOffersSection() {
-  const dailySections = Array.from(document.querySelectorAll('#daily-offers'));
-  const dailyLists = Array.from(document.querySelectorAll('#daily-offers-list'));
-  const best = document.getElementById('best-sellers');
-
-  // احذف أي نسخ إضافية بالكامل
-  dailySections.slice(1).forEach(sec => sec.remove());
-
-  // لو في نسخ إضافية لنفس الـ id داخل أقسام أخرى
-  dailyLists.slice(1).forEach(el => {
-    const sec = el.closest('section');
-    if (sec && sec.id !== 'daily-offers') sec.remove();
-    else el.remove();
-  });
-
-  const daily = document.getElementById('daily-offers');
-  if (!daily || !best) return;
-
-  // تأكد أن عروض اليوم قبل الأكثر مبيعاً
-  const dailyBeforeBest = !!(daily.compareDocumentPosition(best) & Node.DOCUMENT_POSITION_FOLLOWING);
-  if (!dailyBeforeBest) {
-    best.parentNode?.insertBefore(daily, best);
-  }
-}
-
 // =========================================================
 // 5. التشغيل والتحميل (Init & Loader)
 // =========================================================
 document.addEventListener('DOMContentLoaded', () => {
-  ensureSingleDailyOffersSection();
   loadCartFromStorage();
   renderCategoriesGrid();
 
@@ -348,6 +328,9 @@ renderBestSellers();
       refreshCheckoutButtonState();
     });
   });
+
+  bindCheckoutAttemptToast();
+  setCartCheckoutStep(1);
 
   refreshCheckoutButtonState();
 });
@@ -385,6 +368,14 @@ document.addEventListener('click', (e) => {
     }
     if (act === 'checkout') {
       checkoutWhatsApp();
+      return;
+    }
+    if (act === 'go-checkout-step') {
+      setCartCheckoutStep(2);
+      return;
+    }
+    if (act === 'back-review-step') {
+      setCartCheckoutStep(1);
       return;
     }
     if (act === 'apply-sub-filter') {
@@ -720,7 +711,7 @@ function openCategory(catName, isRestore = false) {
   };
 
   if (isRestore) {
-    document.querySelectorAll('#main-hero, #mosaic, #categories-area, #best-sellers, #daily-offers')
+    document.querySelectorAll('#main-hero, #categories-area, #best-sellers, #daily-offers')
       .forEach(el => el.style.display = 'none');
     productsArea.style.display = 'block';
     productsArea.classList.remove('hidden-state');
@@ -732,18 +723,14 @@ function openCategory(catName, isRestore = false) {
     productList.classList.add('fade-out-grid');
     setTimeout(() => {
       render();
-      const yOffset = -90;
-      const y = productsArea.getBoundingClientRect().top + window.pageYOffset + yOffset;
-      window.scrollTo({ top: y, behavior: 'smooth' });
+      scrollToProductsHeader('smooth');
       productList.classList.remove('fade-out-grid');
     }, 300);
   } else {
-    const itemsToHide = '#main-hero, #mosaic, #categories-area, #best-sellers, #daily-offers';
+    const itemsToHide = '#main-hero, #categories-area, #best-sellers, #daily-offers';
     smoothSwitch(itemsToHide, '#products-area', () => {
       render();
-      const yOffset = -90;
-      const y = productsArea.getBoundingClientRect().top + window.pageYOffset + yOffset;
-      window.scrollTo({ top: y, behavior: 'smooth' });
+      scrollToProductsHeader('smooth');
     });
   }
 }
@@ -795,6 +782,23 @@ function applySubFilter(tag, btnElement) {
   }, 300);
 }
 
+function getStickyHeaderOffset(extra = 12) {
+  const header = document.querySelector('.store-header');
+  const h = header ? header.offsetHeight : 0;
+  return h + extra;
+}
+
+function scrollToProductsHeader(behavior = 'smooth') {
+  const anchor =
+    document.getElementById('products-header-anchor') ||
+    document.querySelector('#products-area .section-header') ||
+    document.getElementById('products-area');
+  if (!anchor) return;
+
+  const y = anchor.getBoundingClientRect().top + window.pageYOffset - getStickyHeaderOffset();
+  window.scrollTo({ top: Math.max(0, y), behavior });
+}
+
 // =========================================================
 // 8. دوال التنقل والاسترجاع (Navigation & Session)
 // =========================================================
@@ -825,7 +829,7 @@ function showCategories(target = 'top') {
 
   setTimeout(() => {
     itemsToHide.forEach(el => el.style.display = 'none');
-    ['#main-hero', '#mosaic', '#best-sellers', '#daily-offers', '#categories-area'].forEach(id => {
+    ['#main-hero', '#best-sellers', '#daily-offers', '#categories-area'].forEach(id => {
       const el = document.querySelector(id);
       if (el) {
         el.style.display = (id === '#main-hero') ? 'flex' : 'block';
@@ -861,19 +865,27 @@ window.addEventListener('beforeunload', () => {
 });
 
 function restoreUserSession() {
-  const savedData = sessionStorage.getItem('userSession');
-  if (!savedData) return;
+  try {
+    const savedData = sessionStorage.getItem('userSession');
+    if (!savedData) return;
 
-  const session = JSON.parse(savedData);
-  if (session.isProductsView && session.categoryName) {
-    openCategory(session.categoryName, true);
-    setTimeout(() => {
-      window.scrollTo({ top: session.scroll, behavior: 'auto' });
-    }, 100);
-  } else {
-    setTimeout(() => {
-      window.scrollTo({ top: session.scroll, behavior: 'auto' });
-    }, 100);
+    const session = JSON.parse(savedData);
+    const scroll = Number(session?.scroll) || 0;
+    const isProductsView = !!session?.isProductsView;
+    const categoryName = (session?.categoryName || '').toString().trim();
+
+    if (isProductsView && categoryName) {
+      openCategory(categoryName, true);
+      setTimeout(() => {
+        window.scrollTo({ top: scroll, behavior: 'auto' });
+      }, 100);
+    } else {
+      setTimeout(() => {
+        window.scrollTo({ top: scroll, behavior: 'auto' });
+      }, 100);
+    }
+  } catch (_) {
+    // ignore malformed session payloads
   }
 }
 
@@ -882,7 +894,7 @@ function filterProducts() {
   const txt = (input?.value || '').toLowerCase().trim();
 
   if (txt !== '') {
-    const itemsToHide = '#main-hero, #mosaic, #categories-area, #best-sellers, #daily-offers';
+    const itemsToHide = '#main-hero, #categories-area, #best-sellers, #daily-offers';
     smoothSwitch(itemsToHide, '#products-area', () => {
       document.getElementById('current-category-title').innerText = 'نتائج البحث';
       const filterContainer = document.getElementById('smart-filters');
@@ -919,7 +931,20 @@ function loadCartFromStorage() {
       return;
     }
     const parsed = JSON.parse(raw);
-    cart = Array.isArray(parsed) ? parsed : [];
+    cart = Array.isArray(parsed)
+      ? parsed.map((it) => {
+          if (!it || typeof it !== 'object') return null;
+          const name = (it.name || '').toString().trim();
+          if (!name) return null;
+          return {
+            name,
+            variant: (it.variant || '').toString().trim(),
+            price: Math.max(0, Number(it.price) || 0),
+            quantity: Math.max(1, Number(it.quantity) || 1),
+            image: ((it.image || '').toString().trim()) || DEFAULT_IMAGE
+          };
+        }).filter(Boolean)
+      : [];
   } catch (e) {
     console.error('Error reading cart from storage', e);
     cart = [];
@@ -953,7 +978,7 @@ function addToCart(name, price, imageUrl, variant = '') {
 
   saveCartToStorage();
   updateCartUI();
-  showToast();
+  showAddToCartToast();
 }
 
 function removeFromCart(index) {
@@ -976,27 +1001,35 @@ function updateQty(index, change) {
 function buildCartItemHTML(item, index) {
   const lineTotal = item.price * item.quantity;
   const img = item.image || DEFAULT_IMAGE;
-  const title = item.variant ? `${item.name} (${item.variant})` : item.name;
+  const title = item.name;
+  const variant = (item.variant || '').toString().trim();
+  const fullTitle = variant ? `${title} (${variant})` : title;
 
   return `
     <div class="cart-item">
       <div class="cart-item-main">
         <div class="cart-item-thumb">
-          <img src="${escapeHtml(img)}" alt="${escapeHtml(title)}"
+          <img src="${escapeHtml(img)}" alt="${escapeHtml(fullTitle)}"
                onerror="this.src='${DEFAULT_IMAGE}'">
         </div>
         <div class="cart-item-info">
           <div class="cart-item-title">${escapeHtml(title)}</div>
-          <div class="cart-item-sub">سعر القطعة: ${item.price} ج.م</div>
+          ${variant ? `<div class="cart-item-variant">${escapeHtml(variant)}</div>` : ''}
+          <div class="cart-item-pricing">
+            <span class="cart-item-sub">سعر القطعة</span>
+            <b class="cart-item-unit-price">${item.price} ج.م</b>
+          </div>
           <div class="cart-item-row">
             <div class="cart-qty-controls">
               <button class="qty-btn" type="button" data-cart-action="dec" data-index="${index}">−</button>
               <span class="qty-value">${item.quantity}</span>
               <button class="qty-btn" type="button" data-cart-action="inc" data-index="${index}">+</button>
             </div>
-            <div class="cart-line-total">${lineTotal} ج.م</div>
+            <div class="cart-line-total">
+              <span>الإجمالي</span>
+              <b>${lineTotal} ج.م</b>
+            </div>
           </div>
-          <div class="cart-item-note">تمت الإضافة إلى السلة بنجاح ✅</div>
         </div>
       </div>
       <button class="cart-item-remove" type="button" data-cart-action="remove" data-index="${index}">
@@ -1060,19 +1093,137 @@ function toggleCart(forceOpen) {
   document.body.classList.toggle('cart-open', shouldOpen);
   document.documentElement.classList.toggle('cart-open', shouldOpen);
 
-  if (shouldOpen) restoreCheckoutData();
+  if (shouldOpen) {
+    restoreCheckoutData();
+    setCartCheckoutStep(1);
+  }
 }
 
 function showToast() {
   const toast = document.getElementById('toast-notification');
   if (!toast) return;
-  toast.classList.add('active');
-  setTimeout(() => toast.classList.remove('active'), 2000);
+  const message = arguments[0];
+  const type = arguments[1] || 'ok';
+  const duration = Number(arguments[2]) || 2000;
+  const safeMessage = (message || '').toString().trim() || ADD_TO_CART_TOAST_MESSAGE;
+
+  // reset any previous state before showing again
+  toast.classList.remove('active');
+  toast.classList.remove('toast-warn');
+
+  toast.textContent = safeMessage;
+  toast.dataset.toastType = type;
+  toast.classList.toggle('toast-warn', type === 'warn');
+  clearTimeout(showToast._t);
+  requestAnimationFrame(() => {
+    toast.classList.add('active');
+  });
+  showToast._t = setTimeout(() => {
+    toast.classList.remove('active');
+    toast.classList.remove('toast-warn');
+    toast.removeAttribute('data-toast-type');
+    toast.textContent = '';
+  }, duration);
+}
+
+function showAddToCartToast() {
+  showToast(ADD_TO_CART_TOAST_MESSAGE, 'ok', 2000);
+}
+
+function showCheckoutValidationToast() {
+  showToast('من فضلك استكمل بيانات الشحن أولاً', 'warn', 2400);
+}
+
+function getMissingCheckoutFields() {
+  const hasItems = Array.isArray(cart) && cart.length > 0;
+  const name = document.getElementById('c-name')?.value.trim();
+  const phone = document.getElementById('c-phone')?.value.trim();
+  const area = document.getElementById('c-area')?.value;
+  const branch = document.getElementById('c-branch')?.value;
+
+  const missing = [];
+  if (!name) missing.push('الاسم');
+  if (!phone) missing.push('الموبايل');
+  if (!area) missing.push('المنطقة');
+  if (!branch) missing.push('الفرع الأقرب');
+
+  return { hasItems, missing };
+}
+
+function maybeShowCheckoutValidationToast(force = false) {
+  const { hasItems, missing } = getMissingCheckoutFields();
+  if (!hasItems || missing.length === 0) return false;
+
+  const now = Date.now();
+  if (!force && (now - __lastCheckoutValidationToastAt) < 900) return false;
+  __lastCheckoutValidationToastAt = now;
+  showCheckoutValidationToast();
+  return true;
+}
+
+function bindCheckoutAttemptToast() {
+  const btn = document.getElementById('checkoutBtn');
+  const footer = document.querySelector('.cart-footer');
+  if (!btn || !footer) return;
+
+  footer.addEventListener('pointerup', (e) => {
+    if (__cartCheckoutStep !== 2) return;
+    if (!btn.disabled) return;
+
+    const r = btn.getBoundingClientRect();
+    const x = e.clientX;
+    const y = e.clientY;
+    const insideBtn = x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
+    if (insideBtn) {
+      __checkoutAttemptedSubmit = true;
+      refreshCheckoutButtonState();
+      maybeShowCheckoutValidationToast(true);
+    }
+  });
+}
+
+function setCartCheckoutStep(step = 1) {
+  __cartCheckoutStep = (step === 2) ? 2 : 1;
+
+  const form = document.querySelector('.cart-form');
+  const proceedBtn = document.getElementById('proceedCheckoutStepBtn');
+  const checkoutBtn = document.getElementById('checkoutBtn');
+  const submitHelp = document.querySelector('.checkout-submit-help');
+  const note = document.querySelector('.cart-note');
+  const validation = document.getElementById('checkoutValidationMsg');
+  const stepHint = document.getElementById('cartStepHint');
+  const stepBadge = document.getElementById('checkoutStepBadge');
+
+  if (form) form.style.display = (__cartCheckoutStep === 2) ? '' : 'none';
+  if (proceedBtn) proceedBtn.style.display = (__cartCheckoutStep === 1) ? '' : 'none';
+  if (checkoutBtn) checkoutBtn.style.display = (__cartCheckoutStep === 2) ? '' : 'none';
+  if (submitHelp) submitHelp.style.display = (__cartCheckoutStep === 2) ? '' : 'none';
+  if (note) note.style.display = (__cartCheckoutStep === 2) ? '' : 'none';
+  if (stepHint) {
+    stepHint.textContent = (__cartCheckoutStep === 2)
+      ? 'أكمل بيانات الشحن ثم أرسل الطلب'
+      : 'راجع السلة قبل إدخال بيانات الشحن';
+  }
+  if (stepBadge) stepBadge.textContent = 'إتمام الطلب';
+
+  if (validation && __cartCheckoutStep === 1) {
+    validation.textContent = '';
+    validation.classList.remove('is-warn', 'is-info');
+  }
+
+  if (__cartCheckoutStep === 2) {
+    const firstField = document.getElementById('c-name');
+    firstField?.focus?.();
+  }
+
+  refreshCheckoutButtonState();
 }
 
 function refreshCheckoutButtonState() {
-  const btn = document.querySelector('.checkout-btn');
+  const btn = document.getElementById('checkoutBtn');
   if (!btn) return;
+  if (!btn.dataset.defaultLabel) btn.dataset.defaultLabel = (btn.textContent || '').trim();
+  const feedbackEl = document.getElementById('checkoutValidationMsg');
 
   const hasItems = cart.length > 0;
   const name = document.getElementById('c-name')?.value.trim();
@@ -1080,14 +1231,85 @@ function refreshCheckoutButtonState() {
   const area = document.getElementById('c-area')?.value;
   const branch = document.getElementById('c-branch')?.value;
 
-  const ok = !!(hasItems && name && phone && area && branch);
+  const missing = [];
+  if (!name) missing.push('الاسم');
+  if (!phone) missing.push('الموبايل');
+  if (!area) missing.push('المنطقة');
+  if (!branch) missing.push('الفرع الأقرب');
 
-  // ✅ مطلوب: الزر يفضل شغال (مش disabled)
+  if (hasItems && name && phone && area && branch) {
+    __checkoutAttemptedSubmit = false;
+  }
+
+  const requiredState = [
+    ['name', !!name],
+    ['phone', !!phone],
+    ['area', !!area],
+    ['branch', !!branch]
+  ];
+  const isCheckoutStep = (__cartCheckoutStep === 2);
+  const shouldMarkInvalid = isCheckoutStep && __checkoutAttemptedSubmit && hasItems;
+  requiredState.forEach(([key, okField]) => {
+    const group = document.querySelector(`.required-field[data-required="${key}"]`);
+    if (!group) return;
+    group.classList.toggle('field-invalid', shouldMarkInvalid && !okField);
+  });
+
+  const ok = !!(hasItems && name && phone && area && branch);
+  const proceedBtn = document.getElementById('proceedCheckoutStepBtn');
+  if (proceedBtn) {
+    const canProceed = hasItems && !__checkoutSubmitting;
+    proceedBtn.disabled = !canProceed;
+    proceedBtn.classList.toggle('btn-disabled', !canProceed);
+    proceedBtn.setAttribute('aria-disabled', String(!canProceed));
+  }
+
   btn.classList.toggle('btn-disabled', !ok);
-  btn.disabled = false;
+  btn.disabled = !ok || __checkoutSubmitting;
+  btn.setAttribute('aria-disabled', String(btn.disabled));
+  btn.setAttribute('aria-busy', String(__checkoutSubmitting));
+
+  if (!isCheckoutStep) {
+    if (feedbackEl) {
+      feedbackEl.textContent = '';
+      feedbackEl.classList.remove('is-warn', 'is-info');
+    }
+    return;
+  }
+
+  if (__checkoutSubmitting) {
+    btn.textContent = 'جارٍ إرسال الطلب...';
+    if (feedbackEl) {
+      feedbackEl.textContent = 'يتم تجهيز الطلب وتحويلك إلى واتساب...';
+      feedbackEl.classList.remove('is-warn');
+      feedbackEl.classList.add('is-info');
+    }
+    return;
+  }
+
+  if (!ok) {
+    btn.textContent = 'استكمل بيانات الشحن';
+    if (feedbackEl) {
+      if (!hasItems) feedbackEl.textContent = 'أضف منتجات إلى السلة أولاً لإرسال الطلب.';
+      else feedbackEl.textContent = `البيانات الناقصة: ${missing.join(' • ')}`;
+      feedbackEl.classList.remove('is-info');
+      feedbackEl.classList.add('is-warn');
+    }
+    return;
+  }
+
+  btn.textContent = btn.dataset.defaultLabel || 'إرسال الطلب واتساب';
+  if (feedbackEl) {
+    feedbackEl.textContent = '';
+    feedbackEl.classList.remove('is-warn', 'is-info');
+  }
 }
 
 async function checkoutWhatsApp() {
+  if (__checkoutSubmitting) return;
+  __checkoutAttemptedSubmit = true;
+  refreshCheckoutButtonState();
+
   if (!cart || cart.length === 0) {
     alert('السلة فارغة!');
     return;
@@ -1112,9 +1334,7 @@ async function checkoutWhatsApp() {
   if (!branch) missing.push({ label: 'اختار الفرع الاقرب ليك', el: branchSelect });
 
  if (missing.length) {
-  const msg = 'استكمل البيانات\n' + missing.map(m => `- ${m.label}`).join('\n');
-  alert(msg);
-
+  maybeShowCheckoutValidationToast(true);
   const first = missing[0].el;
   if (first) {
     first.focus?.();
@@ -1127,14 +1347,24 @@ async function checkoutWhatsApp() {
     return;
   }
 
-  saveCheckoutData();
+  __checkoutSubmitting = true;
+  refreshCheckoutButtonState();
 
-  await window.AlAshrafOrders.createOrderFromCheckout({
-    cart,
-    customer: { name, phone, area, branch, address },
-    whatsappNumber: WHATSAPP_NUMBER,
-    sourcePage: "index"
-  });
+  try {
+    saveCheckoutData();
+
+    await window.AlAshrafOrders.createOrderFromCheckout({
+      cart,
+      customer: { name, phone, area, branch, address },
+      whatsappNumber: WHATSAPP_NUMBER,
+      sourcePage: "index"
+    });
+  } catch (_) {
+    alert('تعذر إرسال الطلب حالياً، حاول مرة أخرى.');
+  } finally {
+    __checkoutSubmitting = false;
+    refreshCheckoutButtonState();
+  }
 }
 
 // زر السلة العائم

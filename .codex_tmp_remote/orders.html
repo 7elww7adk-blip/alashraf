@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+  <title>طلباتي - الأشراف</title>
+  <link rel="stylesheet" href="style.css?v=1" />
+  <style>
+    /* إضافات بسيطة جداً للصفحة بدون التأثير على باقي الموقع */
+    .orders-wrap{padding:18px 0 40px;}
+    .orders-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:16px;}
+    .orders-title{margin:0;color:var(--deep-brown);font-weight:800;font-family:var(--heading-font);}
+    .orders-actions{display:flex;gap:10px;flex-wrap:wrap;}
+    .orders-card{background:#fff;border-radius:18px;box-shadow:0 8px 22px rgba(0,0,0,0.06);padding:14px;margin-top:10px;}
+    .orders-meta{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px;color:var(--deep-brown);}
+    .orders-pills{grid-column:1/-1;display:flex;gap:8px;flex-wrap:wrap;}
+    .order-pill{display:inline-flex;align-items:center;padding:6px 10px;border-radius:999px;background:#f5efe4;border:1px solid #e0d4c0;font-weight:700;font-size:.85rem;}
+    .order-pill.ok{background:#e9f7ef;border-color:#c7eed4;color:#1e7e34;}
+    .order-pill.warn{background:#fff4e6;border-color:#ffe1b8;color:#b45309;}
+    .orders-address{margin-top:10px;padding-top:10px;border-top:1px solid #f0e6d8;color:var(--deep-brown);}
+    .orders-address-sub{opacity:.75;margin-top:4px;}
+    .orders-items-head{margin-top:12px;display:flex;align-items:center;gap:6px;color:var(--deep-brown);}
+    .orders-items-count{opacity:.75;}
+    .orders-total{margin-top:10px;background:#faf6ee;border:1px solid #f0e6d8;border-radius:16px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;color:var(--deep-brown);font-size:1rem;}
+    .orders-list{margin-top:12px;display:flex;flex-direction:column;gap:10px;}
+    .order-row{width:100%;text-align:right;border:1px solid #f0e6d8;background:#fff;border-radius:16px;padding:12px 14px;cursor:pointer;box-shadow:0 8px 22px rgba(0,0,0,0.04);}
+    .order-row-title{font-weight:700;color:var(--deep-brown);}
+    .order-row-sub{opacity:.75;margin-top:4px;}
+    @media (max-width:700px){.orders-meta{grid-template-columns:1fr;}}
+  
+    /* Mobile symmetry */
+    @media (max-width:520px){
+      .orders-wrap{padding:14px 0 34px;}
+      .orders-card{padding:12px;}
+      .orders-title{text-align:center;width:100%;}
+      .orders-head{justify-content:center;}
+      .orders-meta{grid-template-columns:1fr !important;text-align:center;gap:8px;}
+      .orders-pills{justify-content:center;}
+      .orders-address{text-align:center;}
+      .orders-items-head{justify-content:center;}
+      .cart-item-row{justify-content:space-between;align-items:center;gap:10px;}
+      .order-row{padding:12px;}
+    }
+
+  </style>
+</head>
+
+<body>
+  <header class="store-header">
+    <div class="top-bar">
+      <div class="container top-flex">
+        <div class="right-part">
+          <a href="index.html" class="logo-box">
+            <img src="image/logo.png" alt="الأشراف" >
+          </a>
+          <div class="menu-trigger" onclick="location.href='index.html'">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M3 11l9-8 9 8"></path>
+              <path d="M5 10v10h14V10"></path>
+              <path d="M9 20v-6h6v6"></path>
+            </svg>
+            <span>الرئيسية</span>
+          </div>
+        </div>
+
+        <div class="search-part">
+          <input id="ordersSearch" type="text" placeholder="ابحث في طلباتك (كود طلب / اسم منتج)">
+          <button class="search-submit" type="button" aria-label="بحث">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+          </button>
+        </div>
+
+        <div class="left-part">
+          <div class="menu-trigger" onclick="location.href='index.html#products'">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M6 7l1-3h10l1 3"></path>
+              <path d="M3 7h18l-1.5 14H4.5L3 7z"></path>
+              <path d="M9 11v2"></path>
+              <path d="M15 11v2"></path>
+            </svg>
+            <span>تسوق</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container orders-wrap">
+    <div class="orders-head">
+      <h2 class="orders-title">تفاصيل الطلب</h2>
+</div>
+
+    <section id="orderDetailsCard" class="orders-card"></section>
+
+    <div class="orders-head" style="margin-top:14px;">
+      <h2 class="orders-title">كل طلباتي</h2>
+    </div>
+
+    <section id="ordersList" class="orders-list"></section>
+  </main>
+
+  <script src="orders.js?v=1"></script>
+</body>
+</html>
